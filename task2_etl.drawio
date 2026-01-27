@@ -1,0 +1,288 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.0 Chrome/140.0.7339.249 Electron/38.7.2 Safari/537.36" version="29.3.0">
+  <diagram name="BionicPRO ETL Architecture" id="ETL_ARCHITECTURE">
+    <mxGraphModel dx="3278" dy="2189" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;" value="BionicPRO ETL-архитектура для отчетности" vertex="1">
+          <mxGeometry height="40" width="700" x="40" y="-360" as="geometry" />
+        </mxCell>
+        <object placeholders="1" c4Name="Пилот протеза" c4Type="Person" c4Description="Получает персональные отчеты о работе протеза" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#cccccc&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="user1">
+          <mxCell parent="1" style="html=1;fontSize=11;dashed=0;whiteSpace=wrap;fillColor=#6C6477;strokeColor=#4D4D4D;fontColor=#ffffff;shape=mxgraph.c4.person2;align=center;metaEdit=1;" vertex="1">
+            <mxGeometry height="180" width="200" x="-720" y="40" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="ML-инженер" c4Type="Person" c4Description="Анализирует агрегированные данные" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#cccccc&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="user2">
+          <mxCell parent="1" style="html=1;fontSize=11;dashed=0;whiteSpace=wrap;fillColor=#6C6477;strokeColor=#4D4D4D;fontColor=#ffffff;shape=mxgraph.c4.person2;align=center;metaEdit=1;" vertex="1">
+            <mxGeometry height="180" width="200" x="100" y="-240" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Мобильное приложение" c4Type="Container" c4Technology="iOS/Android + Reports UI" c4Description="Отображение персональных отчетов с возможностью скачивания" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="mobile">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;" vertex="1">
+            <mxGeometry height="120" width="240" x="-360" y="80" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Reports API" c4Type="Container" c4Technology="Spring Boot + GraphQL" c4Description="REST/GraphQL API для получения персональных отчетов с кешированием" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="reports-api">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#82b366;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="120" width="240" x="80" y="80" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="API (Существующий)" c4Type="Container" c4Technology="SpringBoot/ElasticSearch" c4Description="Основной API для телеметрии протезов" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="main-api">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;" vertex="1">
+            <mxGeometry height="120" width="240" x="-320" y="511" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Report Generation Service" c4Type="Container" c4Technology="Spring Boot + JasperReports" c4Description="Генерация PDF/Excel отчетов по шаблонам" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="report-gen">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#82b366;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="120" width="240" x="600" y="80" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Identity Gateway" c4Type="Container" c4Technology="OAuth2 PKCE + JWT" c4Description="Аутентификация и авторизация пользователей" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="identity-gw">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#23A2D9;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#0E7DAD;" vertex="1">
+            <mxGeometry height="120" width="240" x="-360" y="320" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Data Access Control" c4Type="Container" c4Technology="Row-Level Security" c4Description="Контроль доступа к данным по user_id" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="access-ctrl">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#D7CCAD;fontColor=#333333;align=center;arcSize=10;strokeColor=#d6b656;" vertex="1">
+            <mxGeometry height="120" width="240" x="240" y="320" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Audit &amp; Encryption" c4Type="Container" c4Technology="AES-256 + Audit Log" c4Description="Шифрование данных и аудит операций" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="audit-encrypt">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#D7CCAD;fontColor=#333333;align=center;arcSize=10;strokeColor=#d6b656;" vertex="1">
+            <mxGeometry height="120" width="240" x="920" y="150" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Redis Cache" c4Type="Container" c4Technology="Redis Cluster" c4Description="Кеширование API ответов" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="redis">
+          <mxCell parent="1" style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#D7CCAD;fontSize=11;fontColor=#333333;align=center;strokeColor=#d6b656;" vertex="1">
+            <mxGeometry height="100" width="200" x="640" y="280" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Apache Airflow" c4Type="Container" c4Technology="Scheduler + Workers" c4Description="Оркестрация ETL-процессов с мониторингом" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="airflow">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#82b366;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="120" width="240" x="80" y="930" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Kafka Cluster" c4Type="Container" c4Technology="Apache Kafka + Zookeeper" c4Description="Потоковый прием данных от протезов ESP32 через 4G" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="kafka">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#82b366;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="120" width="240" x="480" y="520" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Data Lake" c4Type="Container" c4Technology="MinIO S3-compatible" c4Description="Хранилище сырых данных с партиционированием по user_id" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="data-lake">
+          <mxCell parent="1" style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#82b366;fontSize=11;fontColor=#ffffff;align=center;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="100" width="200" x="500" y="720" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Prometheus + Grafana" c4Type="Container" c4Technology="Monitoring Stack" c4Description="Мониторинг ETL и метрики производительности" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="monitoring">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=11;labelBackgroundColor=none;fillColor=#f8cecc;fontColor=#333333;align=center;arcSize=10;strokeColor=#b85450;" vertex="1">
+            <mxGeometry height="120" width="240" x="960" y="520" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="ClickHouse Cluster" c4Type="Database" c4Technology="OLAP + Materialized Views" c4Description="Витрина отчетности с row-level security по user_id" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="clickhouse">
+          <mxCell parent="1" style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#82b366;fontSize=11;fontColor=#ffffff;align=center;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="100" width="200" x="100" y="520" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="CRM DB" c4Type="Database" c4Technology="Oracle Database 12" c4Description="Данные клиентов и заказов" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="crm-db">
+          <mxCell parent="1" style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#23A2D9;fontSize=11;fontColor=#ffffff;align=center;strokeColor=#0E7DAD;" vertex="1">
+            <mxGeometry height="100" width="200" x="100" y="1120" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="User Registry" c4Type="Database" c4Technology="PostgreSQL" c4Description="Связи пользователей с региональными IdP" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#E6E6E6&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="user-registry">
+          <mxCell parent="1" style="shape=cylinder3;size=15;whiteSpace=wrap;html=1;boundedLbl=1;rounded=0;labelBackgroundColor=none;fillColor=#23A2D9;fontSize=11;fontColor=#ffffff;align=center;strokeColor=#0E7DAD;" vertex="1">
+            <mxGeometry height="100" width="200" x="-560" y="520" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Протезы ESP32" c4Type="IoT Device" c4Technology="ESP32 + 4G Module" c4Description="Бионические протезы с телеметрией" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#cccccc&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="prosthetics">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#999999;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#666666;" vertex="1">
+            <mxGeometry height="120" width="240" x="1040" y="320" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="CRM (Битрикс24)" c4Type="External System" c4Technology="Bitrix24" c4Description="Данные клиентов и заказов" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#cccccc&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="crm">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#999999;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#666666;" vertex="1">
+            <mxGeometry height="120" width="240" x="-320" y="1000" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="External IdP" c4Type="External System" c4Technology="ЕСИА, EU, US IdP" c4Description="Внешние удостоверяющие центры" label="&lt;font style=&quot;font-size: 14px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;[%c4Type%: %c4Technology%]&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font style=&quot;font-size: 11px&quot;&gt;&lt;font color=&quot;#cccccc&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="external-idp">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;labelBackgroundColor=none;fillColor=#999999;fontColor=#ffffff;align=center;arcSize=10;strokeColor=#666666;" vertex="1">
+            <mxGeometry height="120" width="240" x="-840" y="320" as="geometry" />
+          </mxCell>
+        </object>
+        <mxCell id="flow1" edge="1" parent="1" source="user1" target="mobile" value="Запрос отчетов">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="140" as="sourcePoint" />
+            <mxPoint x="500" y="140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow2" edge="1" parent="1" source="mobile" style="strokeColor=#d79b00;fillColor=#ffe6cc;" target="reports-api" value="API calls (OAuth2 token)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="flow3" edge="1" parent="1" source="reports-api" style="strokeColor=#82b366;" target="clickhouse" value="Запросы отчетов с RLS">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="flow4" edge="1" parent="1" source="mobile" style="strokeColor=#d79b00;fillColor=#ffe6cc;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="identity-gw" value="OAuth2 PKCE">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow5" edge="1" parent="1" source="identity-gw" style="entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="user-registry" value="User lookup">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-240" y="480" />
+              <mxPoint x="-460" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow6" edge="1" parent="1" source="external-idp" style="strokeColor=#d79b00;fillColor=#ffe6cc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="identity-gw" value="OAuth2 response">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow7" edge="1" parent="1" source="prosthetics" style="strokeColor=#ff6666;fillColor=#ffcccc;entryX=1;entryY=0.25;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="kafka" value="Real-time data streaming via 4G">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1160" y="480" />
+              <mxPoint x="840" y="480" />
+              <mxPoint x="840" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow8" edge="1" parent="1" source="crm" style="strokeColor=#82b366;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="airflow" value="ETL every 15 min">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="1030" />
+              <mxPoint x="40" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow9" edge="1" parent="1" source="crm" style="exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="crm-db">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-200" y="1170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow10" edge="1" parent="1" source="kafka" style="strokeColor=#82b366;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="data-lake" value="Batch processing">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="690" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow11" edge="1" parent="1" source="airflow" style="strokeColor=#82b366;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" target="data-lake" value="ETL orchestration">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="960" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow12" edge="1" parent="1" source="airflow" style="strokeColor=#82b366;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="crm-db" value="Data extraction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="flow13" edge="1" parent="1" source="airflow" style="strokeColor=#82b366;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" target="clickhouse" value="Data loading &amp; transformation">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="flow14" edge="1" parent="1" source="reports-api" style="strokeColor=#82b366;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="report-gen" value="PDF/Excel generation">
+          <mxGeometry relative="1" x="0.0714" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow15" edge="1" parent="1" source="reports-api" style="strokeColor=#D7CCAD;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="access-ctrl" value="Authorization check">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="260" y="280" />
+              <mxPoint x="360" y="280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow16" edge="1" parent="1" source="airflow" style="strokeColor=#f8cecc;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="monitoring" value="Metrics &amp; logs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1080" y="1020" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow17" edge="1" parent="1" source="kafka" style="strokeColor=#f8cecc;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="monitoring" value="Metrics &amp; logs">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow18" edge="1" parent="1" source="reports-api" style="strokeColor=#D7CCAD;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="redis" value="Cache API responses">
+          <mxGeometry relative="1" x="0.2917" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="520" y="170" />
+              <mxPoint x="520" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow19" edge="1" parent="1" source="user2" style="strokeColor=#82b366;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.504;exitY=0.996;exitDx=0;exitDy=0;exitPerimeter=0;" target="reports-api" value="Analytics requests">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="190" y="-40" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow20" edge="1" parent="1" source="kafka" style="strokeColor=#82b366;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0.992;entryY=0.575;entryDx=0;entryDy=0;entryPerimeter=0;" target="airflow" value="Stream processing trigger">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="800" y="610" />
+              <mxPoint x="800" y="1000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow21" edge="1" parent="1" source="audit-encrypt" style="strokeColor=#D7CCAD;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="reports-api" value="Audit logging">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="240" />
+              <mxPoint x="560" y="140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow22" edge="1" parent="1" source="audit-encrypt" style="strokeColor=#D7CCAD;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="clickhouse" value="Data encryption">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="280" />
+              <mxPoint x="980" y="440" />
+              <mxPoint x="600" y="440" />
+              <mxPoint x="600" y="480" />
+              <mxPoint x="400" y="480" />
+              <mxPoint x="400" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow23" edge="1" parent="1" source="access-ctrl" style="strokeColor=#D7CCAD;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.855;entryY=0;entryDx=0;entryDy=4.35;entryPerimeter=0;" target="clickhouse" value="RLS enforcement">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="360" y="480" />
+              <mxPoint x="270" y="480" />
+            </Array>
+            <mxPoint x="270" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <object placeholders="1" c4Name="ETL Pipelines" c4Type="DetailBox" c4Description="1. Prosthetics Data Pipeline: Kafka → Data Lake → ClickHouse&#xa;2. CRM Integration Pipeline: Oracle → ClickHouse (every 15 min)&#xa;3. Reports Mart Pipeline: Pre-aggregated user metrics&#xa;4. Data Lineage &amp; Audit Pipeline: GDPR/152-ФЗ compliance" label="&lt;font style=&quot;font-size: 13px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="etl-detail">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;labelBackgroundColor=none;fillColor=#e1d5e7;fontColor=#333333;align=left;arcSize=10;strokeColor=#9673a6;" vertex="1">
+            <mxGeometry height="90" width="300" x="160" y="1400" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Security &amp; Compliance" c4Type="DetailBox" c4Description="✅ AES-256 encryption (data-at-rest &amp; in-transit)&#xa;✅ Row-level security in ClickHouse&#xa;✅ GDPR/152-ФЗ compliance with audit trails&#xa;✅ TLS 1.3 for all connections&#xa;✅ OAuth2 PKCE for mobile authentication&#xa;✅ Data lineage tracking for transparency" label="&lt;font style=&quot;font-size: 13px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="security-detail">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;labelBackgroundColor=none;fillColor=#f8cecc;fontColor=#333333;align=left;arcSize=10;strokeColor=#b85450;" vertex="1">
+            <mxGeometry height="130" width="300" x="-200" y="1400" as="geometry" />
+          </mxCell>
+        </object>
+        <object placeholders="1" c4Name="Scalability Features" c4Type="DetailBox" c4Description="📈 Auto-scaling Kafka brokers for international expansion&#xa;📈 ClickHouse sharding by user_id hash&#xa;📈 Kubernetes HPA for Airflow workers&#xa;📈 Load balancing for API with auto-scaling&#xa;📈 Partitioning by date and user_id&#xa;📈 Redis clustering for cache scalability" label="&lt;font style=&quot;font-size: 13px&quot;&gt;&lt;b&gt;%c4Name%&lt;/b&gt;&lt;/font&gt;&lt;div&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;%c4Description%&lt;/font&gt;&lt;/div&gt;" id="scalability-detail">
+          <mxCell parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;labelBackgroundColor=none;fillColor=#dae8fc;fontColor=#333333;align=left;arcSize=10;strokeColor=#6c8ebf;" vertex="1">
+            <mxGeometry height="130" width="300" x="520" y="1400" as="geometry" />
+          </mxCell>
+        </object>
+        <mxCell id="flow24" edge="1" parent="1" source="main-api" style="strokeColor=#23A2D9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="clickhouse" value="Historical data access">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="flow25" edge="1" parent="1" source="data-lake" style="strokeColor=#82b366;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=67.5;entryPerimeter=0;exitPerimeter=0;" target="clickhouse" value="Bulk data loading">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="770" />
+              <mxPoint x="400" y="588" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
