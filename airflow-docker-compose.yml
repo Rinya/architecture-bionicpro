@@ -173,6 +173,53 @@ volumes:
   postgres-airflow-data:
   clickhouse-data:
 
+  # BionicPRO Reports API Backend
+  reports-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bionicpro-reports-api
+    ports:
+      - "5000:5000"
+    environment:
+      # Flask settings
+      FLASK_ENV: production
+      FLASK_APP: app.py
+      PORT: 5000
+
+      # JWT configuration
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-bionicpro-jwt-secret-2024}
+
+      # ClickHouse connection
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DB: bionicpro
+      CLICKHOUSE_USER: reports_user
+      CLICKHOUSE_PASSWORD: secure_reports_password_2024!
+
+      # Redis connection
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # Security
+      ADMIN_USERS: admin
+    volumes:
+      - ./backend/logs:/app/logs
+    depends_on:
+      - clickhouse
+      - redis
+    networks:
+      - bionicpro-network
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 networks:
   bionicpro-network:
     external: true
