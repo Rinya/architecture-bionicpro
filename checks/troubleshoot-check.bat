@@ -83,11 +83,32 @@ if exist .env (
         echo [!] JWT_SECRET_KEY is missing
     )
 
-    findstr "POSTGRES_PASSWORD" .env > nul
+    findstr "POSTGRES_KEYCLOAK_PASSWORD" .env > nul
     if !ERRORLEVEL!==0 (
-        echo [✓] POSTGRES_PASSWORD is set
+        echo [✓] POSTGRES_KEYCLOAK_PASSWORD is set
     ) else (
-        echo [!] POSTGRES_PASSWORD is missing
+        echo [!] POSTGRES_KEYCLOAK_PASSWORD is missing
+    )
+
+    findstr "POSTGRES_AIRFLOW_PASSWORD" .env > nul
+    if !ERRORLEVEL!==0 (
+        echo [✓] POSTGRES_AIRFLOW_PASSWORD is set
+    ) else (
+        echo [!] POSTGRES_AIRFLOW_PASSWORD is missing
+    )
+
+    findstr "CLICKHOUSE_PASSWORD" .env > nul
+    if !ERRORLEVEL!==0 (
+        echo [✓] CLICKHOUSE_PASSWORD is set
+    ) else (
+        echo [!] CLICKHOUSE_PASSWORD is missing
+    )
+
+    findstr "REDIS_PASSWORD" .env > nul
+    if !ERRORLEVEL!==0 (
+        echo [✓] REDIS_PASSWORD is set
+    ) else (
+        echo [!] REDIS_PASSWORD is missing
     )
 
     findstr "AIRFLOW_UID" .env > nul

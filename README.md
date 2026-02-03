@@ -66,6 +66,7 @@ docker-compose up -d
 - ✅ **Упрощенный запуск** - одна команда для всех сервисов
 
 **📚 Подробная инструкция**: См. [STARTUP_GUIDE.md](STARTUP_GUIDE.md)
+**🔄 Миграция с предыдущих версий**: См. [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
 
 ### ⚠️  Настройка .env файла
 
@@ -84,15 +85,17 @@ nano .env
 |------------|----------|--------------|
 | `JWT_SECRET_KEY` | Секретный ключ для JWT токенов | Сгенерировать: `openssl rand -hex 32` или `python -c "import secrets; print(secrets.token_hex(32))"` |
 | `BITRIX24_WEBHOOK_URL` | Webhook для интеграции с Bitrix24 | 1. Войти в Bitrix24 → Приложения → Webhook<br>2. Создать входящий webhook<br>3. Скопировать URL |
-| `POSTGRES_PASSWORD` | Пароль для баз данных | Создать надежный пароль |
-| `CLICKHOUSE_PASSWORD` | Пароль ClickHouse | Создать надежный пароль |
-| `REDIS_PASSWORD` | Пароль Redis | Создать надежный пароль |
+| `POSTGRES_KEYCLOAK_PASSWORD` | Пароль PostgreSQL для Keycloak | Создать надежный пароль (16+ символов) |
+| `POSTGRES_AIRFLOW_PASSWORD` | Пароль PostgreSQL для Airflow | Создать надежный пароль (16+ символов) |
+| `CLICKHOUSE_PASSWORD` | Пароль ClickHouse OLAP БД | Создать надежный пароль (16+ символов) |
+| `REDIS_PASSWORD` | Пароль Redis кеша | Создать надежный пароль (16+ символов) |
 
 **Пример правильно настроенного .env:**
 ```bash
 JWT_SECRET_KEY=a4f8b2c1d5e9f7a3b8c2d6e0f4a7b1c5d8e2f6a0b4c8d2e6f0a4b8c1d5e9f7a3
 BITRIX24_WEBHOOK_URL=https://mycompany.bitrix24.com/rest/1/abc123xyz/
-POSTGRES_PASSWORD=SecurePostgresPassword123!
+POSTGRES_KEYCLOAK_PASSWORD=SecureKeycloakDB2024!
+POSTGRES_AIRFLOW_PASSWORD=SecureAirflowDB2024!
 CLICKHOUSE_PASSWORD=SecureClickhousePassword123!
 REDIS_PASSWORD=SecureRedisPassword123!
 ```
@@ -183,7 +186,9 @@ architecture-bionicpro/
 │   ├── test-services.bat           # 🆕 Быстрый тест всех сервисов
 │   ├── quick-health-check.bat      # 🆕 Краткая проверка здоровья системы
 │   ├── health-check-full.bat       # 🆕 Полная диагностика системы
-│   └── troubleshoot-check.bat      # 🆕 Диагностика проблем и их решений
+│   ├── troubleshoot-check.bat      # 🆕 Диагностика проблем и их решений
+│   └── README.md                   # 🆕 Документация диагностических скриптов
+├── MIGRATION_GUIDE.md              # 🆕 Руководство по миграции версий
 │
 ├── frontend/                       # React UI
 │   ├── src/components/             # UI компоненты
@@ -333,7 +338,7 @@ Proprietary - BionicPRO Enterprise License
 
 ---
 
-**Версия**: 2.1.0 🆕
+**Версия**: 2.1.2 🆕
 **Последнее обновление**: Февраль 2026
 **Статус**: Production Ready ✅
-**Основные изменения**: Объединение Docker Compose файлов, единая команда запуска, автоматические диагностические скрипты
+**Основные изменения**: Объединение Docker Compose файлов, единая команда запуска, автоматические диагностические скрипты, переменные окружения для всех паролей

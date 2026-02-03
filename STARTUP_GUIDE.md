@@ -109,7 +109,8 @@ AIRFLOW_PROJ_DIR=.
 JWT_SECRET_KEY=a4f8b2c1d5e9f7a3b8c2d6e0f4a7b1c5d8e2f6a0b4c8d2e6f0a4b8c1d5e9f7a3
 
 # Database Passwords - ИЗМЕНИТЬ НА НАДЕЖНЫЕ!
-POSTGRES_PASSWORD=MySecurePostgresPassword2024!
+POSTGRES_KEYCLOAK_PASSWORD=MySecureKeycloakDB2024!
+POSTGRES_AIRFLOW_PASSWORD=MySecureAirflowDB2024!
 CLICKHOUSE_PASSWORD=MySecureClickhousePassword2024!
 REDIS_PASSWORD=MySecureRedisPassword2024!
 
@@ -759,7 +760,8 @@ docker-compose down -v
 
 ---
 
-**Версия**: 2.1.0 🆕
+**Версия**: 2.1.2 🆕
 **Последнее обновление**: Февраль 2026
-**Основные изменения**: Добавлены автоматические диагностические скрипты для Windows
+**Основные изменения**: Добавлены автоматические диагностические скрипты для Windows, переменные окружения для всех паролей БД
 **Новые инструменты**: `checks\test-services.bat`, `checks\quick-health-check.bat`, `checks\health-check-full.bat`, `checks\troubleshoot-check.bat`
+**Безопасность**: Все пароли БД вынесены в .env файл

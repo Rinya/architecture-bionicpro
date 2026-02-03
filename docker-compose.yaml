@@ -6,7 +6,7 @@ x-airflow-common: &airflow-common
   image: apache/airflow:2.7.0
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${POSTGRES_AIRFLOW_PASSWORD:-airflow}@postgres-airflow:5432/airflow
     AIRFLOW__CORE__FERNET_KEY: '5_jRTMFBUsDmIv5svBnkDxrieltLKTEJLOn4pmynld4='
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
@@ -24,7 +24,7 @@ x-airflow-common: &airflow-common
     CLICKHOUSE_PORT: 8123
     CLICKHOUSE_DB: bionicpro
     CLICKHOUSE_USER: bionicpro_user
-    CLICKHOUSE_PASSWORD: bionicpro_password
+    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-bionicpro_password}
     REDIS_HOST: redis
     REDIS_PORT: 6379
   volumes:
@@ -52,7 +52,7 @@ services:
     environment:
       POSTGRES_DB: keycloak_db
       POSTGRES_USER: keycloak_user
-      POSTGRES_PASSWORD: keycloak_password
+      POSTGRES_PASSWORD: ${POSTGRES_KEYCLOAK_PASSWORD:-keycloak_password}
     volumes:
       - ./postgres-keycloak-data:/var/lib/postgresql/data
     ports:
@@ -74,7 +74,7 @@ services:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak_db
       KC_DB_USERNAME: keycloak_user
-      KC_DB_PASSWORD: keycloak_password
+      KC_DB_PASSWORD: ${POSTGRES_KEYCLOAK_PASSWORD:-keycloak_password}
     command:
       - start-dev
       - --import-realm
@@ -118,7 +118,7 @@ services:
     container_name: bionicpro-postgres-airflow
     environment:
       POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
+      POSTGRES_PASSWORD: ${POSTGRES_AIRFLOW_PASSWORD:-airflow}
       POSTGRES_DB: airflow
     volumes:
       - postgres-airflow-data:/var/lib/postgresql/data
@@ -137,9 +137,9 @@ services:
     container_name: bionicpro-redis
     ports:
       - "6380:6379"
-    command: redis-server --requirepass bionicpro_redis_password
+    command: redis-server --requirepass ${REDIS_PASSWORD:-bionicpro_redis_password}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "bionicpro_redis_password", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-bionicpro_redis_password}", "ping"]
       interval: 10s
       timeout: 30s
       retries: 50
@@ -156,9 +156,9 @@ services:
       - "8123:8123"
       - "9000:9000"
     environment:
-      CLICKHOUSE_USER: bionicpro_user
-      CLICKHOUSE_PASSWORD: bionicpro_password
-      CLICKHOUSE_DB: bionicpro
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-bionicpro_user}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-bionicpro_password}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bionicpro}
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./sql/clickhouse-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -282,16 +282,17 @@ services:
       # ClickHouse connection
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PORT: 8123
-      CLICKHOUSE_DB: bionicpro
-      CLICKHOUSE_USER: reports_user
-      CLICKHOUSE_PASSWORD: secure_reports_password_2024!
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-bionicpro}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-bionicpro_user}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-bionicpro_password}
 
       # Redis connection
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-bionicpro_redis_password}
 
       # Security
-      ADMIN_USERS: admin
+      ADMIN_USERS: ${ADMIN_USERS:-admin}
     volumes:
       - ./backend/logs:/app/logs
     depends_on:
