@@ -1,13 +1,28 @@
 # 🚀 Инструкция по запуску BionicPRO для полной проверки
 
+## 🔄 Шаг 0: Получение проекта
+
+### Клонирование репозитория
+```bash
+git clone <repository-url>
+cd architecture-bionicpro
+```
+
+### Проверка структуры
+Убедитесь в наличии файлов:
+- `docker-compose.yaml`
+- `docker-compose.airflow.yml`
+- `.env.example`
+- папки: `frontend/`, `backend/`, `keycloak/`, `sql/`, `dags/`, `logs/`, `plugins/`
+
 ## 📋 Предварительные требования
 
-### Системные требования
-- **Docker** версии 20.10+
-- **Docker Compose** версии 2.0+
-- **Свободная RAM**: минимум 8GB
-- **Свободное место**: минимум 10GB
-- **Открытые порты**: 3000, 5000, 6379, 8080, 8081, 8123, 9000, 9092
+### Системные требования (обновленные)
+- **Docker** версии 24.0+
+- **Docker Compose** версии 2.20+
+- **Свободная RAM**: минимум 12GB (для всех сервисов)
+- **Свободное место**: минимум 15GB
+- **Порты**: 3000, 5000, 5433, 5434, 6380, 8080, 8081, 8123, 9000, 9092
 
 ### Проверка готовности
 ```bash
@@ -26,19 +41,24 @@ docker system info | grep -i memory
 ```bash
 cd architecture-bionicpro
 
-# Создать файл переменных окружения
+# Создать файл переменных окружения из шаблона
 cp .env.example .env
 
-# Отредактировать .env файл:
-# - Установить AIRFLOW_UID=$(id -u) на Linux/Mac
-# - На Windows использовать AIRFLOW_UID=50000
-echo "AIRFLOW_UID=50000" >> .env
+# Настроить пароли для production (ОБЯЗАТЕЛЬНО!)
+# Отредактируйте .env файл и измените:
+# - JWT_SECRET_KEY на уникальный секретный ключ
+# - Все пароли баз данных
+# - ADMIN_USERS при необходимости
 ```
 
-### 1.2 Создание Docker сети
+**🔐 Безопасность конфигурации:**
+- `.env.example` - шаблон с placeholder значениями (в git репозитории)
+- `.env` - ваш локальный файл с реальными паролями (в .gitignore, НЕ в репозитории)
+- **НИКОГДА** не коммитьте `.env` файл с реальными паролями!
+
+### 1.2 Создание Docker сети (исправленное имя)
 ```bash
-# Создать сеть для всех сервисов
-docker network create sprint9_default
+docker network create bionicpro-network
 ```
 
 ### 1.3 Создание необходимых директорий
@@ -50,9 +70,9 @@ chmod 777 dags logs plugins sql  # Для Windows WSL или Linux
 
 ## ⚡ Шаг 2: Поэтапный запуск сервисов
 
-### 2.1 Запуск базовой инфраструктуры (Keycloak + основные сервисы)
+### 2.1 Запуск базовой инфраструктуры (Frontend + Keycloak)
 ```bash
-# Запуск основного docker-compose
+# Основные сервисы
 docker-compose up -d
 
 # Проверка статуса
@@ -60,9 +80,9 @@ docker-compose ps
 ```
 
 **Ожидаемые сервисы**:
-- ✅ keycloak_db (postgres:14)
-- ✅ keycloak (keycloak:21.1)
-- ✅ frontend (react app)
+- ✅ keycloak_db (postgres:14) - порт 5433
+- ✅ keycloak (keycloak:21.1) - порт 8080
+- ✅ frontend (react app) - порт 3000
 
 **Проверка доступности**:
 ```bash
@@ -73,62 +93,56 @@ curl -I http://localhost:8080/auth/realms/reports-realm
 curl -I http://localhost:3000
 ```
 
-### 2.2 Запуск ETL инфраструктуры (Airflow + ClickHouse)
+### 2.2 Запуск ETL инфраструктуры (Airflow + ClickHouse + Backend)
 ```bash
-# Использовать исправленный файл
-docker-compose -f airflow-docker-compose-fixed.yml up -d
+# ETL и аналитика
+docker-compose -f docker-compose.airflow.yml up -d
 
-# Проверить логи инициализации
-docker-compose -f airflow-docker-compose-fixed.yml logs airflow-init
-
-# Дождаться готовности всех сервисов
-docker-compose -f airflow-docker-compose-fixed.yml ps
+# Проверка всех сервисов
+docker-compose -f docker-compose.airflow.yml ps
 ```
 
 **Ожидаемые сервисы**:
-- ✅ postgres-airflow (PostgreSQL для Airflow метаданных)
-- ✅ redis (Кэш и брокер сообщений)
-- ✅ clickhouse (OLAP база данных)
-- ✅ zookeeper + kafka (Потоковые данные)
-- ✅ airflow-webserver (UI Airflow)
-- ✅ airflow-scheduler (Планировщик задач)
-- ✅ airflow-init (Инициализация)
-- ✅ reports-api (Backend API)
+- ✅ postgres-airflow (PostgreSQL 13) - порт 5434
+- ✅ redis (Redis 7-alpine) - порт 6380
+- ✅ clickhouse (ClickHouse 23.8) - порты 8123, 9000
+- ✅ zookeeper + kafka (Confluent 7.4.0) - порт 9092
+- ✅ airflow-webserver - порт 8081
+- ✅ airflow-scheduler
+- ✅ airflow-init
+- ✅ reports-api - порт 5000
 
 ## 🏥 Шаг 3: Проверка здоровья системы
 
-### 3.1 Проверка сервисов
+### 3.1 Актуальные endpoints для проверки
 ```bash
-# Проверка всех health checks
-docker-compose ps
-docker-compose -f airflow-docker-compose-fixed.yml ps
-
-# Проверка отдельных компонентов
-curl http://localhost:8081/health          # Airflow
-curl http://localhost:5000/health          # Reports API
-curl http://localhost:8123/ping            # ClickHouse
-curl http://localhost:8080/auth/realms/reports-realm/.well-known/openid_connect/  # Keycloak
+# Проверка основных сервисов
+curl -I http://localhost:3000                                    # Frontend
+curl -I http://localhost:8080/auth/realms/reports-realm          # Keycloak
+curl -I http://localhost:8081/health                             # Airflow
+curl -I http://localhost:5000/health                             # Reports API
+curl -I http://localhost:8123/ping                               # ClickHouse
 ```
 
 ### 3.2 Проверка логов (если есть ошибки)
 ```bash
 # Логи ключевых сервисов
 docker-compose logs keycloak
-docker-compose -f airflow-docker-compose-fixed.yml logs clickhouse
-docker-compose -f airflow-docker-compose-fixed.yml logs reports-api
-docker-compose -f airflow-docker-compose-fixed.yml logs airflow-scheduler
+docker-compose -f docker-compose.airflow.yml logs clickhouse
+docker-compose -f docker-compose.airflow.yml logs reports-api
+docker-compose -f docker-compose.airflow.yml logs airflow-scheduler
 ```
 
 ### 3.3 Проверка баз данных
 ```bash
 # ClickHouse
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q clickhouse) clickhouse-client --query "SHOW DATABASES"
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "SHOW DATABASES"
 
 # PostgreSQL (Airflow)
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q postgres-airflow) psql -U airflow -d airflow -c "\dt"
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q postgres-airflow) psql -U airflow -d airflow -c "\\dt"
 
 # Redis
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q redis) redis-cli -a bionicpro_redis_password ping
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q redis) redis-cli -a bionicpro_redis_password ping
 ```
 
 ## 📊 Шаг 4: Инициализация данных и тестирование
@@ -136,7 +150,7 @@ docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q redis
 ### 4.1 Создание тестовых данных в ClickHouse
 ```bash
 # Подключение к ClickHouse для создания тестовых данных
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
 -- Создание тестовых данных для демонстрации
 USE bionicpro;
 
@@ -174,7 +188,7 @@ INSERT INTO reports.user_analytics VALUES
 ### 4.2 Проверка доступности тестовых данных
 ```bash
 # Проверка данных в ClickHouse
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
 SELECT
     user_id,
     device_id,
@@ -215,26 +229,26 @@ echo "6. Save"
 ### 5.3 Тестирование API отчётов
 ```bash
 # 1. Получить JWT токен
-JWT_TOKEN=$(curl -s -X POST http://localhost:5000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"user1","password":"password123"}' | \
+JWT_TOKEN=$(curl -s -X POST http://localhost:5000/auth/login \\
+  -H "Content-Type: application/json" \\
+  -d '{"username":"user1","password":"password123"}' | \\
   jq -r '.access_token')
 
 echo "JWT Token: $JWT_TOKEN"
 
 # 2. Проверить доступность отчётов
-curl -H "Authorization: Bearer $JWT_TOKEN" \
-     "http://localhost:5000/reports/user1?start_date=2024-01-15&end_date=2024-01-17&format=json" | \
+curl -H "Authorization: Bearer $JWT_TOKEN" \\
+     "http://localhost:5000/reports/user1?start_date=2024-01-15&end_date=2024-01-17&format=json" | \\
      jq '.'
 
 # 3. Проверить список устройств
-curl -H "Authorization: Bearer $JWT_TOKEN" \
-     "http://localhost:5000/reports/user1/devices" | \
+curl -H "Authorization: Bearer $JWT_TOKEN" \\
+     "http://localhost:5000/reports/user1/devices" | \\
      jq '.'
 
 # 4. Проверить сводку
-curl -H "Authorization: Bearer $JWT_TOKEN" \
-     "http://localhost:5000/reports/user1/summary" | \
+curl -H "Authorization: Bearer $JWT_TOKEN" \\
+     "http://localhost:5000/reports/user1/summary" | \\
      jq '.'
 ```
 
@@ -244,13 +258,13 @@ curl -H "Authorization: Bearer $JWT_TOKEN" \
 curl -I "http://localhost:5000/reports/user1"
 
 # 2. Попытка доступа к чужим данным (должна вернуть 403)
-curl -H "Authorization: Bearer $JWT_TOKEN" \
-     "http://localhost:5000/reports/user2" | \
+curl -H "Authorization: Bearer $JWT_TOKEN" \\
+     "http://localhost:5000/reports/user2" | \\
      jq '.'
 
 # 3. Проверка валидации периода данных
-curl -H "Authorization: Bearer $JWT_TOKEN" \
-     "http://localhost:5000/reports/user1?start_date=2024-12-01&end_date=2024-12-31" | \
+curl -H "Authorization: Bearer $JWT_TOKEN" \\
+     "http://localhost:5000/reports/user1?start_date=2024-12-01&end_date=2024-12-31" | \\
      jq '.'
 ```
 
@@ -350,7 +364,7 @@ echo "Пароль: admin"
 ### 7.3 Имитация ETL обработки (если нет реальных DAGs)
 ```bash
 # Добавление данных напрямую в ClickHouse для имитации ETL
-docker exec -it $(docker-compose -f airflow-docker-compose-fixed.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
 INSERT INTO reports.user_analytics VALUES
     ('user1', 'ESP32-001-BP', today() - 1, 7.5, 86.2, 91.1, 88.3, 1, 11, 41.5, 860.0, now() - INTERVAL 1 HOUR, now(), now()),
     ('user1', 'ESP32-001-BP', today() - 2, 8.1, 89.1, 93.5, 90.2, 0, 13, 38.2, 790.0, now() - INTERVAL 25 HOUR, now(), now());
@@ -403,14 +417,21 @@ echo "AIRFLOW_UID=$(id -u)" >> .env
 echo "AIRFLOW_UID=50000" >> .env
 ```
 
-### Проблема: "additional properties not allowed"
-**Решение**: Используйте исправленный файл `airflow-docker-compose-fixed.yml` вместо оригинального.
+### Проблема: "Network bionicpro-network not found"
+**Решение**:
+```bash
+# Создать отсутствующую сеть
+docker network create bionicpro-network
+
+# Или использовать альтернативную команду
+docker network create sprint9_default
+```
 
 ### Проблема: Порты заняты
 **Решение**:
 ```bash
 # Проверка занятых портов
-netstat -tulpn | grep -E '(3000|5000|6379|8080|8081|8123|9000|9092)'
+netstat -tulpn | grep -E '(3000|5000|5433|5434|6380|8080|8081|8123|9000|9092)'
 
 # Остановка конфликтующих сервисов
 sudo systemctl stop redis
@@ -434,7 +455,7 @@ sudo swapon --show
 **Решение**:
 ```bash
 # Проверка логов ClickHouse
-docker-compose -f airflow-docker-compose-fixed.yml logs clickhouse
+docker-compose -f docker-compose.airflow.yml logs clickhouse
 
 # Проверка файлов инициализации
 ls -la sql/
@@ -454,6 +475,20 @@ docker-compose logs keycloak | grep import
 
 # Проверка realm файла
 ls -la keycloak/realm-export.json
+```
+
+### Проблема: Сеть недоступна между контейнерами
+**Решение**:
+```bash
+# Проверить существующие сети
+docker network ls
+
+# Проверить подключения контейнеров к сети
+docker network inspect bionicpro-network
+
+# Если нужно, удалить и пересоздать сеть
+docker network rm bionicpro-network
+docker network create bionicpro-network
 ```
 
 ## 🎉 Шаг 9: Подтверждение работоспособности
@@ -479,6 +514,25 @@ echo "ClickHouse:   http://localhost:8123/play"
 echo "=== Система готова к использованию! ==="
 ```
 
+## 📈 Современные улучшения и рекомендации
+
+### Безопасность
+- ✅ Смените все пароли по умолчанию в `.env` файле перед production
+- ✅ Используйте SSL/TLS сертификаты для production deployment
+- ✅ Настройте firewall для ограничения доступа к портам
+- ✅ Регулярно обновляйте образы Docker до последних версий
+
+### Performance для production
+- **RAM**: Рекомендуется 16GB+ для production с полной нагрузкой
+- **ClickHouse**: Настройка `max_memory_usage` и `max_threads` в конфигурации
+- **Airflow**: Увеличение `parallelism` и `dag_concurrency` при необходимости
+- **Docker volumes**: Используйте SSD диски для лучшей производительности
+
+### Мониторинг
+- Все health check endpoints доступны для мониторинга
+- Логи всех сервисов централизованы в Docker
+- Redis используется для audit logging всех API запросов
+
 ## 📞 Поддержка
 
 При возникновении проблем:
@@ -487,5 +541,5 @@ echo "=== Система готова к использованию! ==="
 3. Проверьте доступность ресурсов системы
 4. Обратитесь к секции устранения проблем выше
 
-**Время полного запуска**: 5-10 минут в зависимости от системы
+**Время полного запуска**: 5-15 минут в зависимости от системы
 **Система готова к production deployment**: ✅

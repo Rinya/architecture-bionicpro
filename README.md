@@ -39,18 +39,22 @@
 ## 🚀 Быстрый старт
 
 ### Предварительные требования
-- Docker 20.10+
-- Docker Compose 2.0+
-- 8GB+ RAM
-- 10GB+ свободного места
+- Docker 24.0+
+- Docker Compose 2.20+
+- 12GB+ RAM
+- 15GB+ свободного места
 
 ### Запуск системы
 ```bash
 # Клонирование и переход в директорию
 cd architecture-bionicpro
 
+# Настройка окружения
+cp .env.example .env
+# ⚠️  ВАЖНО: Измените пароли в .env файле перед production!
+
 # Создание Docker сети
-docker network create sprint9_default
+docker network create bionicpro-network
 
 # Запуск основных сервисов
 docker-compose up -d
@@ -60,6 +64,21 @@ docker-compose -f docker-compose.airflow.yml up -d
 ```
 
 **📚 Подробная инструкция**: См. [STARTUP_GUIDE.md](STARTUP_GUIDE.md)
+
+### ⚠️  Настройка безопасности
+
+**Файлы конфигурации:**
+- `.env.example` - шаблон конфигурации (в репозитории)
+- `.env` - ваша локальная конфигурация (НЕ в репозитории, в .gitignore)
+
+**Обязательно перед production:**
+1. Создайте `.env` из `.env.example`: `cp .env.example .env`
+2. Измените `JWT_SECRET_KEY` на уникальный секретный ключ
+3. Установите надежные пароли для всех баз данных
+4. Настройте HTTPS/SSL сертификаты
+5. Обновите `ADMIN_USERS` список
+
+**⚠️  НИКОГДА не коммитьте .env файл с реальными паролями в git!**
 
 ## 🔐 Безопасность
 
@@ -116,6 +135,17 @@ GET /metrics                        # Prometheus метрики
 - **Airflow UI**: http://localhost:8081
 - **ClickHouse Play**: http://localhost:8123/play
 
+### Порты сервисов:
+- **Frontend (React)**: 3000
+- **Backend API (Flask)**: 5000
+- **Keycloak**: 8080
+- **Keycloak DB (PostgreSQL)**: 5433
+- **Airflow UI**: 8081
+- **Airflow DB (PostgreSQL)**: 5434
+- **ClickHouse**: 8123, 9000
+- **Redis**: 6380
+- **Kafka**: 9092
+
 ## 📁 Структура проекта
 
 ```
@@ -123,6 +153,7 @@ architecture-bionicpro/
 ├── README.md                        # Этот файл
 ├── STARTUP_GUIDE.md                 # Подробная инструкция запуска
 ├── .env                            # Переменные окружения
+├── .env.example                    # Шаблон переменных окружения
 ├── docker-compose.yaml             # Основные сервисы
 ├── docker-compose.airflow.yml      # ETL инфраструктура
 │
@@ -241,5 +272,5 @@ Proprietary - BionicPRO Enterprise License
 ---
 
 **Версия**: 1.0.0
-**Последнее обновление**: Январь 2026
+**Последнее обновление**: Февраль 2026
 **Статус**: Production Ready ✅
