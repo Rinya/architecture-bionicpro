@@ -8,8 +8,6 @@
 2024__yandex-architecture-sso.code-workspace
 
 # Docker volumes and logs
-/logs
-/plugins
 clickhouse-data/
 redis-data/
 postgres-airflow-data/
