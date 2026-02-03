@@ -1,4 +1,6 @@
-# 🚀 Инструкция по запуску BionicPRO для полной проверки
+# 🚀 Инструкция по запуску BionicPRO (Обновленная версия)
+
+> 🆕 **Важное обновление**: Docker Compose файлы объединены! Теперь запуск всех сервисов происходит одной командой.
 
 ## 🔄 Шаг 0: Получение проекта
 
@@ -8,12 +10,16 @@ git clone <repository-url>
 cd architecture-bionicpro
 ```
 
-### Проверка структуры
+### Проверка структуры (обновленная)
 Убедитесь в наличии файлов:
-- `docker-compose.yaml`
-- `docker-compose.airflow.yml`
-- `.env.example`
-- папки: `frontend/`, `backend/`, `keycloak/`, `sql/`, `dags/`, `logs/`, `plugins/`
+- ✅ `docker-compose.yaml` - **ЕДИНЫЙ файл** со всеми сервисами
+- ✅ `.env.example` - шаблон переменных окружения
+- ✅ `unified-docker-compose-guide.md` - документация по объединенной конфигурации
+- ✅ папки: `frontend/`, `backend/`, `keycloak/`, `sql/`, `dags/`, `logs/`, `plugins/`
+
+### 🗑️ Старые файлы (если есть):
+- `docker-compose.airflow.yml` → перемещен в `.backup`
+- Сейчас используется только один `docker-compose.yaml`
 
 ## 📋 Предварительные требования
 
@@ -37,17 +43,96 @@ docker system info | grep -i memory
 
 ## 🔧 Шаг 1: Подготовка окружения
 
-### 1.1 Настройка переменных окружения
+### 1.1 Настройка переменных окружения ⚡ (КРИТИЧЕСКИ ВАЖНО!)
+
 ```bash
 cd architecture-bionicpro
 
 # Создать файл переменных окружения из шаблона
 cp .env.example .env
+```
 
-# Настроить пароли для production (ОБЯЗАТЕЛЬНО!)
-# Отредактируйте .env файл и измените:
-# - JWT_SECRET_KEY на уникальный секретный ключ
-# - Все пароли баз данных
+### 🔑 Настройка JWT_SECRET_KEY
+**JWT_SECRET_KEY** - секретный ключ для подписи JWT токенов аутентификации.
+
+**Способы генерации:**
+```bash
+# Способ 1: OpenSSL (рекомендуется)
+openssl rand -hex 32
+
+# Способ 2: Python
+python -c "import secrets; print(secrets.token_hex(32))"
+
+# Способ 3: Online генератор (только для разработки!)
+# Идите на https://jwt.io/ → Generate random key
+```
+
+**Пример результата:**
+```
+a4f8b2c1d5e9f7a3b8c2d6e0f4a7b1c5d8e2f6a0b4c8d2e6f0a4b8c1d5e9f7a3
+```
+
+### 🔗 Настройка BITRIX24_WEBHOOK_URL
+
+**Где получить Webhook URL для Bitrix24:**
+
+1. **Войти в Bitrix24:**
+   - Откройте ваш портал Bitrix24 (например: `https://mycompany.bitrix24.com`)
+   - Войдите под администратором
+
+2. **Создать Webhook:**
+   ```
+   Приложения → Разработчикам → Вебхуки → Входящий вебхук
+   ```
+
+3. **Настроить разрешения:**
+   ```
+   ✅ CRM (crm) - чтение/запись контактов и сделок
+   ✅ Списки (lists) - чтение данных
+   ✅ Пользователи (user) - чтение информации о пользователях
+   ```
+
+4. **Скопировать URL:**
+   ```
+   Пример: https://mycompany.bitrix24.com/rest/1/abc123xyz789/
+   ```
+
+**Альтернатива для тестирования:**
+Если у вас нет Bitrix24, можно использовать заглушку:
+```bash
+BITRIX24_WEBHOOK_URL=https://jsonplaceholder.typicode.com/posts/
+```
+
+### 📝 Пример полностью настроенного .env файла:
+```bash
+# Airflow Configuration
+AIRFLOW_UID=50000
+AIRFLOW_PROJ_DIR=.
+
+# JWT Security - СГЕНЕРИРОВАТЬ НОВЫЙ!
+JWT_SECRET_KEY=a4f8b2c1d5e9f7a3b8c2d6e0f4a7b1c5d8e2f6a0b4c8d2e6f0a4b8c1d5e9f7a3
+
+# Database Passwords - ИЗМЕНИТЬ НА НАДЕЖНЫЕ!
+POSTGRES_PASSWORD=MySecurePostgresPassword2024!
+CLICKHOUSE_PASSWORD=MySecureClickhousePassword2024!
+REDIS_PASSWORD=MySecureRedisPassword2024!
+
+# External APIs - ПОЛУЧИТЬ ИЗ BITRIX24
+BITRIX24_WEBHOOK_URL=https://mycompany.bitrix24.com/rest/1/abc123xyz789/
+
+# Admin Users (comma-separated)
+ADMIN_USERS=admin,admin@bionicpro.com
+
+# Environment flags
+FLASK_ENV=production
+NODE_ENV=production
+DEBUG=false
+```
+
+### ⚠️ КРИТИЧЕСКИ ВАЖНО:
+- **НИКОГДА** не коммитьте `.env` файл в Git
+- **ОБЯЗАТЕЛЬНО** генерируйте новый `JWT_SECRET_KEY` для каждой установки
+- Используйте **надежные уникальные пароли** для всех сервисов
 # - ADMIN_USERS при необходимости
 ```
 
@@ -68,80 +153,116 @@ mkdir -p dags logs plugins sql
 chmod 777 dags logs plugins sql  # Для Windows WSL или Linux
 ```
 
-## ⚡ Шаг 2: Поэтапный запуск сервисов
+## 🚀 Шаг 2: Единый запуск всех сервисов (НОВОЕ!)
 
-### 2.1 Запуск базовой инфраструктуры (Frontend + Keycloak)
+> 🎉 **Больше никаких двух команд!** Теперь весь стек запускается одной командой.
+
+### 2.1 Запуск ВСЕХ сервисов одной командой
 ```bash
-# Основные сервисы
+# Запуск всего стека BionicPRO
 docker-compose up -d
 
-# Проверка статуса
+# Проверка статуса всех сервисов
 docker-compose ps
 ```
 
-**Ожидаемые сервисы**:
-- ✅ keycloak_db (postgres:14) - порт 5433
-- ✅ keycloak (keycloak:21.1) - порт 8080
-- ✅ frontend (react app) - порт 3000
+**Ожидаемые сервисы (11 контейнеров):**
 
-**Проверка доступности**:
+| Сервис | Контейнер | Порт | Статус |
+|--------|-----------|------|--------|
+| **Frontend** | bionicpro-frontend | 3000 | Up |
+| **Keycloak** | bionicpro-keycloak | 8080 | Up |
+| **Keycloak DB** | bionicpro-keycloak-db | 5433 | Up (healthy) |
+| **Airflow Web** | bionicpro-airflow-webserver | 8081 | Up (healthy) |
+| **Airflow Scheduler** | bionicpro-airflow-scheduler | - | Up (healthy) |
+| **Airflow DB** | bionicpro-postgres-airflow | 5434 | Up (healthy) |
+| **ClickHouse** | bionicpro-clickhouse | 8123,9000 | Up (healthy) |
+| **Redis** | bionicpro-redis | 6380 | Up (healthy) |
+| **Reports API** | bionicpro-reports-api | 5000 | Up (healthy) |
+| **Kafka** | bionicpro-kafka | 9092 | Up |
+| **Zookeeper** | bionicpro-zookeeper | 2181 | Up |
+
+### 2.2 Автоматический тест всех сервисов
 ```bash
-# Keycloak должен быть доступен
-curl -I http://localhost:8080/auth/realms/reports-realm
+# Windows
+test-services.bat
 
-# Frontend должен загружаться
-curl -I http://localhost:3000
+# Linux/macOS
+curl http://localhost:8080/realms/reports-realm && echo " ✅ Keycloak OK"
+curl http://localhost:8081/health && echo " ✅ Airflow OK"
+curl http://localhost:8123/ping && echo " ✅ ClickHouse OK"
+curl http://localhost:3000 && echo " ✅ Frontend OK"
+curl http://localhost:5000/health && echo " ✅ Reports API OK"
 ```
 
-### 2.2 Запуск ETL инфраструктуры (Airflow + ClickHouse + Backend)
+### 2.3 Пошаговый мониторинг запуска
 ```bash
-# ETL и аналитика
-docker-compose -f docker-compose.airflow.yml up -d
+# 1. Мониторинг в реальном времени
+docker-compose up
 
-# Проверка всех сервисов
-docker-compose -f docker-compose.airflow.yml ps
+# 2. Или запуск в фоне с мониторингом логов
+docker-compose up -d
+docker-compose logs -f
+
+# 3. Проверка healthcheck'ов
+watch docker-compose ps
 ```
 
-**Ожидаемые сервисы**:
-- ✅ postgres-airflow (PostgreSQL 13) - порт 5434
-- ✅ redis (Redis 7-alpine) - порт 6380
-- ✅ clickhouse (ClickHouse 23.8) - порты 8123, 9000
-- ✅ zookeeper + kafka (Confluent 7.4.0) - порт 9092
-- ✅ airflow-webserver - порт 8081
-- ✅ airflow-scheduler
-- ✅ airflow-init
-- ✅ reports-api - порт 5000
+### 📊 Порядок запуска (автоматический):
+1. **Базы данных** → `postgres-airflow`, `keycloak-db`
+2. **Кеширование** → `redis`
+3. **Аналитика** → `clickhouse`
+4. **Очереди** → `zookeeper` → `kafka`
+5. **Инициализация** → `airflow-init` ⏳
+6. **Основные сервисы** → `keycloak`, `frontend`, `reports-api`
+7. **Airflow UI** → `airflow-webserver`, `airflow-scheduler`
 
 ## 🏥 Шаг 3: Проверка здоровья системы
 
-### 3.1 Актуальные endpoints для проверки
+### 3.1 Обновленные endpoints для проверки
 ```bash
-# Проверка основных сервисов
-curl -I http://localhost:3000                                    # Frontend
-curl -I http://localhost:8080/auth/realms/reports-realm          # Keycloak
-curl -I http://localhost:8081/health                             # Airflow
-curl -I http://localhost:5000/health                             # Reports API
-curl -I http://localhost:8123/ping                               # ClickHouse
+# Правильные URL для проверки (обновлено!)
+curl http://localhost:3000                                       # Frontend
+curl http://localhost:8080/realms/reports-realm                  # Keycloak (БЕЗ /auth/)
+curl http://localhost:8081/health                                # Airflow
+curl http://localhost:5000/health                                # Reports API
+curl http://localhost:8123/ping                                  # ClickHouse
+
+# Ожидаемые ответы:
+# Keycloak: {"realm":"reports-realm","public_key":"..."}
+# Airflow: {"metadatabase":{"status":"healthy"}...}
+# ClickHouse: Ok.
 ```
 
-### 3.2 Проверка логов (если есть ошибки)
+### 3.2 Упрощенная проверка логов
 ```bash
-# Логи ключевых сервисов
+# Все логи из единого файла
+docker-compose logs [service_name]
+
+# Примеры конкретных сервисов:
 docker-compose logs keycloak
-docker-compose -f docker-compose.airflow.yml logs clickhouse
-docker-compose -f docker-compose.airflow.yml logs reports-api
-docker-compose -f docker-compose.airflow.yml logs airflow-scheduler
+docker-compose logs clickhouse
+docker-compose logs reports-api
+docker-compose logs airflow-scheduler
+docker-compose logs airflow-webserver
+
+# Логи в реальном времени
+docker-compose logs -f keycloak
 ```
 
-### 3.3 Проверка баз данных
+### 3.3 Проверка баз данных (обновлено)
 ```bash
-# ClickHouse
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "SHOW DATABASES"
+# ClickHouse (обновленная команда)
+docker-compose exec clickhouse clickhouse-client --query "SHOW DATABASES"
 
 # PostgreSQL (Airflow)
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q postgres-airflow) psql -U airflow -d airflow -c "\\dt"
+docker-compose exec postgres-airflow psql -U airflow -d airflow -c "\\dt"
 
-# Redis
+# PostgreSQL (Keycloak)
+docker-compose exec keycloak_db psql -U keycloak_user -d keycloak_db -c "\\dt"
+
+# Redis (с паролем)
+docker-compose exec redis redis-cli -a bionicpro_redis_password ping
 docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q redis) redis-cli -a bionicpro_redis_password ping
 ```
 
@@ -541,5 +662,56 @@ echo "=== Система готова к использованию! ==="
 3. Проверьте доступность ресурсов системы
 4. Обратитесь к секции устранения проблем выше
 
-**Время полного запуска**: 5-15 минут в зависимости от системы
+## 🆕 Что изменилось в объединенной версии
+
+### ✅ Преимущества новой версии:
+- **Одна команда** вместо двух: `docker-compose up -d`
+- **Единая сеть** - решены все проблемы с networking
+- **Именованные контейнеры** с префиксом `bionicpro-*`
+- **Оптимизированные зависимости** - правильный порядок запуска
+- **Упрощенная отладка** - все логи в одном месте
+- **Централизованная конфигурация** - все в одном файле
+
+### 📁 Файловые изменения:
+- ✅ `docker-compose.yaml` - объединенный файл
+- ✅ `unified-docker-compose-guide.md` - новое руководство
+- ✅ `test-services.bat` - скрипт тестирования
+- 📦 `*.backup` - резервные копии старых файлов
+
+### 🔄 Migration из старой версии:
+Если у вас была запущена старая версия с двумя файлами:
+```bash
+# 1. Остановить старые сервисы
+docker-compose down
+docker-compose -f docker-compose.airflow.yml down
+
+# 2. Запустить новую версию
+docker-compose up -d
+
+# 3. Проверить результат
+test-services.bat
+```
+
+### 🔧 Команды управления сервисами:
+```bash
+# Запуск всех сервисов
+docker-compose up -d
+
+# Запуск только UI части
+docker-compose up -d keycloak_db keycloak frontend
+
+# Запуск только аналитики
+docker-compose up -d postgres-airflow redis clickhouse airflow-webserver airflow-scheduler
+
+# Перезапуск конкретного сервиса
+docker-compose restart keycloak
+
+# Остановка всех сервисов
+docker-compose down
+
+# Остановка с удалением volumes (ОСТОРОЖНО!)
+docker-compose down -v
+```
+
+**Время полного запуска**: 3-10 минут (улучшено благодаря оптимизации зависимостей)
 **Система готова к production deployment**: ✅

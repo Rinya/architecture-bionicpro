@@ -20,6 +20,7 @@
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   Frontend  │────│   Backend   │────│ ClickHouse  │
 │  (React)    │    │   (Flask)   │    │   (OLAP)    │
+│    :3000    │    │    :5000    │    │ :8123,:9000 │
 └─────────────┘    └─────────────┘    └─────────────┘
        │                  │                  ▲
        │                  │                  │
@@ -27,12 +28,14 @@
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │  Keycloak   │    │    Redis    │    │   Airflow   │
 │   (Auth)    │    │   (Cache)   │    │    (ETL)    │
+│    :8080    │    │    :6380    │    │    :8081    │
 └─────────────┘    └─────────────┘    └─────────────┘
                                             ▲
                                             │
                                       ┌─────────────┐
                                       │    Kafka    │
                                       │ (Streaming) │
+                                      │    :9092    │
                                       └─────────────┘
 ```
 
@@ -44,41 +47,60 @@
 - 12GB+ RAM
 - 15GB+ свободного места
 
-### Запуск системы
+### ⚡ Единая команда запуска (НОВОЕ!)
 ```bash
 # Клонирование и переход в директорию
 cd architecture-bionicpro
 
 # Настройка окружения
 cp .env.example .env
-# ⚠️  ВАЖНО: Измените пароли в .env файле перед production!
+# ⚠️  ВАЖНО: Настройте переменные в .env файле (см. раздел "Настройка .env")
 
-# Создание Docker сети
-docker network create bionicpro-network
-
-# Запуск основных сервисов
+# Запуск ВСЕГО стека одной командой
 docker-compose up -d
-
-# Запуск ETL инфраструктуры
-docker-compose -f docker-compose.airflow.yml up -d
 ```
+
+### 🎯 Что изменилось:
+- ✅ **Объединены Docker Compose файлы** - теперь один файл вместо двух
+- ✅ **Единая сеть** - решены все проблемы с networking
+- ✅ **Упрощенный запуск** - одна команда для всех сервисов
 
 **📚 Подробная инструкция**: См. [STARTUP_GUIDE.md](STARTUP_GUIDE.md)
 
-### ⚠️  Настройка безопасности
+### ⚠️  Настройка .env файла
 
-**Файлы конфигурации:**
-- `.env.example` - шаблон конфигурации (в репозитории)
-- `.env` - ваша локальная конфигурация (НЕ в репозитории, в .gitignore)
+**Обязательная конфигурация:**
+```bash
+# 1. Создать .env файл
+cp .env.example .env
 
-**Обязательно перед production:**
-1. Создайте `.env` из `.env.example`: `cp .env.example .env`
-2. Измените `JWT_SECRET_KEY` на уникальный секретный ключ
-3. Установите надежные пароли для всех баз данных
-4. Настройте HTTPS/SSL сертификаты
-5. Обновите `ADMIN_USERS` список
+# 2. Настроить переменные (детали ниже)
+nano .env
+```
 
-**⚠️  НИКОГДА не коммитьте .env файл с реальными паролями в git!**
+**Ключевые переменные для настройки:**
+
+| Переменная | Описание | Как получить |
+|------------|----------|--------------|
+| `JWT_SECRET_KEY` | Секретный ключ для JWT токенов | Сгенерировать: `openssl rand -hex 32` или `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `BITRIX24_WEBHOOK_URL` | Webhook для интеграции с Bitrix24 | 1. Войти в Bitrix24 → Приложения → Webhook<br>2. Создать входящий webhook<br>3. Скопировать URL |
+| `POSTGRES_PASSWORD` | Пароль для баз данных | Создать надежный пароль |
+| `CLICKHOUSE_PASSWORD` | Пароль ClickHouse | Создать надежный пароль |
+| `REDIS_PASSWORD` | Пароль Redis | Создать надежный пароль |
+
+**Пример правильно настроенного .env:**
+```bash
+JWT_SECRET_KEY=a4f8b2c1d5e9f7a3b8c2d6e0f4a7b1c5d8e2f6a0b4c8d2e6f0a4b8c1d5e9f7a3
+BITRIX24_WEBHOOK_URL=https://mycompany.bitrix24.com/rest/1/abc123xyz/
+POSTGRES_PASSWORD=SecurePostgresPassword123!
+CLICKHOUSE_PASSWORD=SecureClickhousePassword123!
+REDIS_PASSWORD=SecureRedisPassword123!
+```
+
+**⚠️  ВАЖНО:**
+- **НИКОГДА** не коммитьте `.env` файл в git!
+- Используйте **разные пароли** для каждого сервиса
+- Генерируйте **новый JWT_SECRET_KEY** для каждой установки
 
 ## 🔐 Безопасность
 
@@ -152,10 +174,12 @@ GET /metrics                        # Prometheus метрики
 architecture-bionicpro/
 ├── README.md                        # Этот файл
 ├── STARTUP_GUIDE.md                 # Подробная инструкция запуска
-├── .env                            # Переменные окружения
+├── unified-docker-compose-guide.md # Руководство по объединенной конфигурации
+├── .env                            # Переменные окружения (не в git)
 ├── .env.example                    # Шаблон переменных окружения
-├── docker-compose.yaml             # Основные сервисы
-├── docker-compose.airflow.yml      # ETL инфраструктура
+├── docker-compose.yaml             # 🆕 ВСЕ СЕРВИСЫ (объединенный файл)
+├── docker-compose.*.backup         # Резервные копии старых файлов
+├── test-services.bat               # 🆕 Скрипт тестирования сервисов
 │
 ├── frontend/                       # React UI
 │   ├── src/components/             # UI компоненты
@@ -171,12 +195,18 @@ architecture-bionicpro/
 │   └── realm-export.json           # Настройки realm
 │
 ├── sql/                           # SQL скрипты
-│   └── clickhouse-init.sql         # Инициализация ClickHouse
+│   └── clickhouse-init.sql         # Инициализация ClickHouse (обновлен)
 │
 ├── dags/                          # Airflow DAGs
 ├── logs/                          # Логи приложения
 └── plugins/                       # Airflow плагины
 ```
+
+### 🆕 **Что изменилось в файловой структуре:**
+- **`docker-compose.yaml`** - объединенный файл со всеми сервисами
+- **`unified-docker-compose-guide.md`** - документация по новой структуре
+- **`test-services.bat`** - быстрый тест всех сервисов
+- **`sql/clickhouse-init.sql`** - обновлен синтаксис для ClickHouse 23+
 
 ## 🔧 Разработка
 
@@ -196,15 +226,31 @@ python app.py
 
 ### Отладка и тестирование:
 ```bash
+# Запуск всех сервисов
+docker-compose up -d
+
+# Быстрая проверка всех сервисов (Windows)
+test-services.bat
+
 # Проверка логов
 docker-compose logs [service_name]
 
 # Проверка состояния сервисов
 docker-compose ps
 
-# Тестирование API
+# Тестирование отдельных сервисов
+curl http://localhost:8080/realms/reports-realm  # Keycloak
+curl http://localhost:8081/health               # Airflow
+curl http://localhost:8123/ping                 # ClickHouse
+curl http://localhost:3000                      # Frontend
+
+# Тестирование API с токеном
 curl -H "Authorization: Bearer $JWT_TOKEN" \
      "http://localhost:5000/reports/user1"
+
+# Запуск только определенной группы сервисов
+docker-compose up -d keycloak_db keycloak frontend  # Только UI
+docker-compose up -d postgres-airflow redis airflow-webserver  # Только Airflow
 ```
 
 ## 📈 Мониторинг и производительность
@@ -271,6 +317,7 @@ Proprietary - BionicPRO Enterprise License
 
 ---
 
-**Версия**: 1.0.0
+**Версия**: 2.0.0 🆕
 **Последнее обновление**: Февраль 2026
 **Статус**: Production Ready ✅
+**Основные изменения**: Объединение Docker Compose файлов, единая команда запуска
