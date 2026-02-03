@@ -179,7 +179,11 @@ architecture-bionicpro/
 ├── .env.example                    # Шаблон переменных окружения
 ├── docker-compose.yaml             # 🆕 ВСЕ СЕРВИСЫ (объединенный файл)
 ├── docker-compose.*.backup         # Резервные копии старых файлов
-├── test-services.bat               # 🆕 Скрипт тестирования сервисов
+├── checks/                         # 🆕 Диагностические скрипты
+│   ├── test-services.bat           # 🆕 Быстрый тест всех сервисов
+│   ├── quick-health-check.bat      # 🆕 Краткая проверка здоровья системы
+│   ├── health-check-full.bat       # 🆕 Полная диагностика системы
+│   └── troubleshoot-check.bat      # 🆕 Диагностика проблем и их решений
 │
 ├── frontend/                       # React UI
 │   ├── src/components/             # UI компоненты
@@ -205,7 +209,10 @@ architecture-bionicpro/
 ### 🆕 **Что изменилось в файловой структуре:**
 - **`docker-compose.yaml`** - объединенный файл со всеми сервисами
 - **`unified-docker-compose-guide.md`** - документация по новой структуре
-- **`test-services.bat`** - быстрый тест всех сервисов
+- **`checks\test-services.bat`** - быстрый тест всех сервисов
+- **`checks\quick-health-check.bat`** - краткая диагностика системы
+- **`checks\health-check-full.bat`** - полная проверка здоровья
+- **`checks\troubleshoot-check.bat`** - диагностика проблем
 - **`sql/clickhouse-init.sql`** - обновлен синтаксис для ClickHouse 23+
 
 ## 🔧 Разработка
@@ -230,7 +237,16 @@ python app.py
 docker-compose up -d
 
 # Быстрая проверка всех сервисов (Windows)
-test-services.bat
+checks\test-services.bat
+
+# Краткая диагностика системы
+checks\quick-health-check.bat
+
+# Полная проверка здоровья системы
+checks\health-check-full.bat
+
+# Диагностика проблем с предложениями решений
+checks\troubleshoot-check.bat
 
 # Проверка логов
 docker-compose logs [service_name]
@@ -317,7 +333,7 @@ Proprietary - BionicPRO Enterprise License
 
 ---
 
-**Версия**: 2.0.0 🆕
+**Версия**: 2.1.0 🆕
 **Последнее обновление**: Февраль 2026
 **Статус**: Production Ready ✅
-**Основные изменения**: Объединение Docker Compose файлов, единая команда запуска
+**Основные изменения**: Объединение Docker Compose файлов, единая команда запуска, автоматические диагностические скрипты

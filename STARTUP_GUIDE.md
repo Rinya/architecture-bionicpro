@@ -17,10 +17,6 @@ cd architecture-bionicpro
 - ✅ `unified-docker-compose-guide.md` - документация по объединенной конфигурации
 - ✅ папки: `frontend/`, `backend/`, `keycloak/`, `sql/`, `dags/`, `logs/`, `plugins/`
 
-### 🗑️ Старые файлы (если есть):
-- `docker-compose.airflow.yml` → перемещен в `.backup`
-- Сейчас используется только один `docker-compose.yaml`
-
 ## 📋 Предварительные требования
 
 ### Системные требования (обновленные)
@@ -133,30 +129,8 @@ DEBUG=false
 - **НИКОГДА** не коммитьте `.env` файл в Git
 - **ОБЯЗАТЕЛЬНО** генерируйте новый `JWT_SECRET_KEY` для каждой установки
 - Используйте **надежные уникальные пароли** для всех сервисов
-# - ADMIN_USERS при необходимости
-```
-
-**🔐 Безопасность конфигурации:**
-- `.env.example` - шаблон с placeholder значениями (в git репозитории)
-- `.env` - ваш локальный файл с реальными паролями (в .gitignore, НЕ в репозитории)
-- **НИКОГДА** не коммитьте `.env` файл с реальными паролями!
-
-### 1.2 Создание Docker сети (исправленное имя)
-```bash
-docker network create bionicpro-network
-```
-
-### 1.3 Создание необходимых директорий
-```bash
-# Создать директории для Airflow
-mkdir -p dags logs plugins sql
-chmod 777 dags logs plugins sql  # Для Windows WSL или Linux
-```
 
 ## 🚀 Шаг 2: Единый запуск всех сервисов (НОВОЕ!)
-
-> 🎉 **Больше никаких двух команд!** Теперь весь стек запускается одной командой.
-
 ### 2.1 Запуск ВСЕХ сервисов одной командой
 ```bash
 # Запуск всего стека BionicPRO
@@ -184,8 +158,14 @@ docker-compose ps
 
 ### 2.2 Автоматический тест всех сервисов
 ```bash
-# Windows
-test-services.bat
+# Windows - Быстрый тест всех сервисов
+checks\test-services.bat
+
+# Windows - Краткая диагностика с подсчетом успешных/неудачных тестов
+checks\quick-health-check.bat
+
+# Windows - Полная проверка здоровья системы (включая БД, логи, сети)
+checks\health-check-full.bat
 
 # Linux/macOS
 curl http://localhost:8080/realms/reports-realm && echo " ✅ Keycloak OK"
@@ -525,6 +505,67 @@ echo "Тестовые данные для вчера и позавчера до
 - [ ] **OLAP integration**: Данные берутся из ClickHouse
 - [ ] **Data validation**: Проверяется обработанность Airflow
 
+## 🔧 Диагностические скрипты (НОВОЕ!)
+
+### Автоматические инструменты диагностики
+
+Для упрощения диагностики и устранения проблем добавлены специальные скрипты:
+
+#### 🚀 `checks\test-services.bat` - Быстрый тест сервисов
+Проверяет доступность всех основных endpoints:
+```bash
+checks\test-services.bat
+```
+**Что проверяется:**
+- ✅ Keycloak - http://localhost:8080/realms/reports-realm
+- ✅ Airflow - http://localhost:8081/health
+- ✅ ClickHouse - http://localhost:8123/ping
+- ✅ Frontend - http://localhost:3000
+- ✅ Reports API - http://localhost:5000/health
+
+#### 📊 `checks\quick-health-check.bat` - Краткая диагностика
+Быстрая проверка с подсчетом статистики:
+```bash
+checks\quick-health-check.bat
+```
+**Что включено:**
+- ✅ Тест всех 5 endpoints с таймаутом
+- ✅ Краткий статус Docker контейнеров
+- ✅ Подсчет успешных/неудачных тестов
+- ✅ Быстрые ссылки для доступа
+
+#### 🔬 `checks\health-check-full.bat` - Полная диагностика
+Глубокая проверка всех компонентов системы:
+```bash
+checks\health-check-full.bat
+```
+**Что включено:**
+- ✅ **3.1**: Проверка endpoints с детальными ответами
+- ✅ **3.2**: Статус Docker контейнеров и последние логи
+- ✅ **3.3**: Проверка всех баз данных (ClickHouse, PostgreSQL, Redis)
+- ✅ Системная информация (Docker volumes, networks, system df)
+
+#### 🛠️ `checks\troubleshoot-check.bat` - Диагностика проблем
+Автоматическая диагностика типичных проблем:
+```bash
+checks\troubleshoot-check.bat
+```
+**Что проверяется:**
+- ✅ **Порты**: Проверка занятости требуемых портов
+- ✅ **Память и диск**: Доступные ресурсы системы
+- ✅ **Docker сети**: Состояние BionicPRO сетей
+- ✅ **Переменные окружения**: Валидация .env файла
+- ✅ **Контейнеры**: Поиск нездоровых контейнеров
+- ✅ **Директории**: Проверка обязательных папок
+- ✅ **Предложения решений**: Автоматические рекомендации
+
+### Рекомендуемая последовательность диагностики:
+
+1. **Ежедневная проверка**: `checks\quick-health-check.bat`
+2. **При подозрении на проблемы**: `checks\health-check-full.bat`
+3. **При ошибках запуска**: `checks\troubleshoot-check.bat`
+4. **Для простого теста**: `checks\test-services.bat`
+
 ## 🚨 Устранение проблем
 
 ### Проблема: "AIRFLOW_UID variable is not set"
@@ -675,7 +716,7 @@ echo "=== Система готова к использованию! ==="
 ### 📁 Файловые изменения:
 - ✅ `docker-compose.yaml` - объединенный файл
 - ✅ `unified-docker-compose-guide.md` - новое руководство
-- ✅ `test-services.bat` - скрипт тестирования
+- ✅ `checks\test-services.bat` - скрипт тестирования
 - 📦 `*.backup` - резервные копии старых файлов
 
 ### 🔄 Migration из старой версии:
@@ -689,7 +730,7 @@ docker-compose -f docker-compose.airflow.yml down
 docker-compose up -d
 
 # 3. Проверить результат
-test-services.bat
+checks\test-services.bat
 ```
 
 ### 🔧 Команды управления сервисами:
@@ -715,3 +756,10 @@ docker-compose down -v
 
 **Время полного запуска**: 3-10 минут (улучшено благодаря оптимизации зависимостей)
 **Система готова к production deployment**: ✅
+
+---
+
+**Версия**: 2.1.0 🆕
+**Последнее обновление**: Февраль 2026
+**Основные изменения**: Добавлены автоматические диагностические скрипты для Windows
+**Новые инструменты**: `checks\test-services.bat`, `checks\quick-health-check.bat`, `checks\health-check-full.bat`, `checks\troubleshoot-check.bat`
