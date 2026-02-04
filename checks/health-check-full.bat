@@ -132,11 +132,13 @@ echo.
 echo Testing Redis...
 docker-compose exec -T redis redis-cli -a bionicpro_redis_password ping > nul 2>&1
 if !ERRORLEVEL!==0 (
-    echo [✓] Redis - OK
+    echo [✓] Redis - OK ^(default password^)
     echo Redis info:
     docker-compose exec -T redis redis-cli -a bionicpro_redis_password info server | findstr "redis_version"
 ) else (
-    echo [✗] Redis - FAILED
+    echo [!] Redis - FAILED with default password
+    echo Note: If you changed REDIS_PASSWORD in .env, Redis may still be working
+    echo Try: docker exec -it bionicpro-redis redis-cli -a your_redis_password ping
 )
 
 echo.

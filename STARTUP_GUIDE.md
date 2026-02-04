@@ -237,14 +237,18 @@ docker-compose logs -f keycloak
 docker-compose exec clickhouse clickhouse-client --query "SHOW DATABASES"
 
 # PostgreSQL (Airflow)
+# Примечание: Если вы изменили пароль в .env, команда может запросить пароль
 docker-compose exec postgres-airflow psql -U airflow -d airflow -c "\\dt"
 
 # PostgreSQL (Keycloak)
+# Примечание: Если вы изменили пароль в .env, команда может запросить пароль
 docker-compose exec keycloak_db psql -U keycloak_user -d keycloak_db -c "\\dt"
 
-# Redis (с паролем)
+# Redis (с паролем - используйте пароль из .env файла)
+# Если используете дефолтный пароль:
 docker-compose exec redis redis-cli -a bionicpro_redis_password ping
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q redis) redis-cli -a bionicpro_redis_password ping
+# Если установили свой пароль в .env, замените его в команде:
+# docker exec -it bionicpro-redis redis-cli -a ваш_redis_пароль ping
 ```
 
 ## 📊 Шаг 4: Инициализация данных и тестирование
@@ -252,7 +256,7 @@ docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q redis) redi
 ### 4.1 Создание тестовых данных в ClickHouse
 ```bash
 # Подключение к ClickHouse для создания тестовых данных
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it bionicpro-clickhouse clickhouse-client --query "
 -- Создание тестовых данных для демонстрации
 USE bionicpro;
 
@@ -290,7 +294,7 @@ INSERT INTO reports.user_analytics VALUES
 ### 4.2 Проверка доступности тестовых данных
 ```bash
 # Проверка данных в ClickHouse
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it bionicpro-clickhouse clickhouse-client --query "
 SELECT
     user_id,
     device_id,
@@ -466,7 +470,7 @@ echo "Пароль: admin"
 ### 7.3 Имитация ETL обработки (если нет реальных DAGs)
 ```bash
 # Добавление данных напрямую в ClickHouse для имитации ETL
-docker exec -it $(docker-compose -f docker-compose.airflow.yml ps -q clickhouse) clickhouse-client --query "
+docker exec -it bionicpro-clickhouse clickhouse-client --query "
 INSERT INTO reports.user_analytics VALUES
     ('user1', 'ESP32-001-BP', today() - 1, 7.5, 86.2, 91.1, 88.3, 1, 11, 41.5, 860.0, now() - INTERVAL 1 HOUR, now(), now()),
     ('user1', 'ESP32-001-BP', today() - 2, 8.1, 89.1, 93.5, 90.2, 0, 13, 38.2, 790.0, now() - INTERVAL 25 HOUR, now(), now());
@@ -618,7 +622,7 @@ sudo swapon --show
 **Решение**:
 ```bash
 # Проверка логов ClickHouse
-docker-compose -f docker-compose.airflow.yml logs clickhouse
+docker-compose logs clickhouse
 
 # Проверка файлов инициализации
 ls -la sql/
@@ -725,7 +729,7 @@ echo "=== Система готова к использованию! ==="
 ```bash
 # 1. Остановить старые сервисы
 docker-compose down
-docker-compose -f docker-compose.airflow.yml down
+docker-compose down
 
 # 2. Запустить новую версию
 docker-compose up -d
