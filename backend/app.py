@@ -41,6 +41,7 @@ CLICKHOUSE_CONFIG = {
 REDIS_CONFIG = {
     'host': os.environ.get('REDIS_HOST', 'localhost'),
     'port': int(os.environ.get('REDIS_PORT', 6379)),
+    'password': os.environ.get('REDIS_PASSWORD'),
     'db': 0,
     'decode_responses': True
 }
@@ -66,6 +67,12 @@ def init_connections():
     except Exception as e:
         logger.error(f"❌ Failed to initialize connections: {e}")
         raise
+
+# Инициализация подключений при загрузке модуля
+try:
+    init_connections()
+except Exception as e:
+    logger.warning(f"Failed to initialize connections on startup: {e}")
 
 def require_user_access(f):
     """Декоратор для проверки доступа пользователя к своим данным"""
