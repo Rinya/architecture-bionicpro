@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<yandex>
+    <users>
+        <!-- Стандартный пользователь -->
+        <default>
+            <password></password>
+            <networks>
+                <ip>::1</ip>
+                <ip>127.0.0.1</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+        </default>
+
+        <!-- Пользователь для отчётов — с правами, объявленными в XML -->
+        <reports_user>
+            <password>secure_reports_password_2024!</password>
+            <profile>default</profile>
+            <quota>default</quota>
+            <networks>
+                <ip>::1</ip>
+                <ip>127.0.0.1</ip>
+                <ip>0.0.0.0/0</ip>
+            </networks>
+
+            <!-- 🔥 ВКЛЮЧАЕМ УПРАВЛЕНИЕ ДОСТУПОМ — ОБЯЗАТЕЛЬНО! -->
+            <access_management>1</access_management>
+
+            <!-- 🔥 ОБЪЯВЛЯЕМ ПРАВА НА БАЗЫ ДАННЫХ -->
+            <grant>
+                <!-- SELECT, INSERT, UPDATE, DELETE на reports и crm -->
+                <database>reports</database>
+                <table>*</table>
+                <privilege>SELECT</privilege>
+                <privilege>INSERT</privilege>
+                <privilege>UPDATE</privilege>
+                <privilege>DELETE</privilege>
+            </grant>
+            <grant>
+                <database>crm</database>
+                <table>*</table>
+                <privilege>SELECT</privilege>
+                <privilege>INSERT</privilege>
+                <privilege>UPDATE</privilege>
+                <privilege>DELETE</privilege>
+            </grant>
+            <!-- SELECT только на telemetry и audit -->
+            <grant>
+                <database>telemetry</database>
+                <table>*</table>
+                <privilege>SELECT</privilege>
+            </grant>
+            <grant>
+                <database>audit</database>
+                <table>*</table>
+                <privilege>SELECT</privilege>
+                <privilege>INSERT</privilege>
+            </grant>
+        </reports_user>
+
+        <!-- Пользователь с полными правами -->
+        <bionicpro_user>
+            <password>clickhouse_password</password>
+            <profile>default</profile>
+            <quota>default</quota>
+            <networks>
+                <ip>::1</ip>
+                <ip>127.0.0.1</ip>
+                <ip>0.0.0.0/0</ip>
+            </networks>
+            <access_management>1</access_management>
+            <!-- Права на всё -->
+            <grant>
+                <database>*</database>
+                <table>*</table>
+                <privilege>ALL</privilege>
+            </grant>
+        </bionicpro_user>
+    </users>
+
+    <profiles>
+        <default>
+            <max_memory_usage>10000000000</max_memory_usage>
+            <use_uncompressed_cache>0</use_uncompressed_cache>
+            <load_balancing>random</load_balancing>
+        </default>
+    </profiles>
+
+    <quotas>
+        <default>
+            <interval>
+                <duration>3600</duration>
+                <queries>0</queries>
+                <errors>0</errors>
+                <result_rows>0</result_rows>
+                <read_rows>0</read_rows>
+                <execution_time>0</execution_time>
+            </interval>
+        </default>
+    </quotas>
+</yandex>
