@@ -5,17 +5,18 @@ GDPR/152-ФЗ соответствие, аудит операций и упра�
 
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.dummy import DummyOperator
-from airflow.providers.clickhouse.hooks.clickhouse import ClickHouseHook
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from clickhouse_driver import Client  # <-- Используем clickhouse-driver напрямую
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.providers.email.operators.email import EmailOperator
+from airflow.providers.smtp.operators.smtp import EmailOperator
 import pandas as pd
 import json
 import logging
 import hashlib
 from cryptography.fernet import Fernet
 import os
+import uuid
 
 # Конфигурация DAG
 DEFAULT_ARGS = {
@@ -29,12 +30,26 @@ DEFAULT_ARGS = {
     'email': ['compliance@bionicpro.com', 'security@bionicpro.com'],
 }
 
+# Настройки подключения к ClickHouse (можно вынести в Airflow Connections, но для простоты — здесь)
+CLICKHOUSE_CONFIG = {
+    'host': 'clickhouse',
+    'port': 9000,
+    'user': 'reports_user',
+    'password': 'secure_reports_password_2024!',  # ⚠️ Лучше использовать Airflow Connection + get_password()
+    'database': 'reports',
+    'settings': {'max_execution_time': 300},
+    'connect_timeout': 10,
+    'send_receive_timeout': 300,
+    'sync_request_timeout': 300,
+    'compression': True,  # Включить сжатие для производительности
+}
+
 # Создание DAG
 dag = DAG(
     'compliance_audit',
     default_args=DEFAULT_ARGS,
     description='GDPR/152-ФЗ Compliance and Security Audit for BionicPRO',
-    schedule_interval='0 2 * * *',  # Ежедневно в 2:00 утра
+    schedule    ='0 2 * * *',  # Ежедневно в 2:00 утра
     catchup=False,
     max_active_runs=1,
     tags=['bionicpro', 'compliance', 'gdpr', '152-fz', 'audit', 'security'],
@@ -50,18 +65,23 @@ dag = DAG(
     """
 )
 
-def audit_etl_operations(**context):
+def get_clickhouse_client():
+    """Возвращает готовый клиент ClickHouse"""
+    return Client(**CLICKHOUSE_CONFIG)
+
+def audit_etl_operations(ds, **kwargs):
     """
     Аудит всех ETL операций за последние 24 часа
     """
     logging.info("🔍 Auditing ETL operations for the last 24 hours...")
 
     try:
-        clickhouse_hook = ClickHouseHook()
+        client = get_clickhouse_client()
 
         # Период аудита (последние 24 часа)
-        audit_start = context['execution_date'] - timedelta(hours=24)
-        audit_end = context['execution_date']
+        execution_date = datetime.strptime(ds, "%Y-%m-%d")
+        audit_start = execution_date - timedelta(hours=24)
+        audit_end = execution_date
 
         logging.info(f"📅 Audit period: {audit_start} to {audit_end}")
 
@@ -85,7 +105,7 @@ def audit_etl_operations(**context):
         ORDER BY start_time DESC
         """
 
-        audit_results = clickhouse_hook.get_records(audit_query)
+        audit_results = client.execute(audit_query)
 
         # Анализ операций
         operations_summary = {
@@ -153,44 +173,63 @@ def audit_etl_operations(**context):
                 })
 
         # Сохранение результатов аудита
-        context['task_instance'].xcom_push(key='operations_audit', value=operations_summary)
+        kwargs['ti'].xcom_push(key='operations_audit', value=operations_summary)
 
         # Создание записи об аудите
-        audit_summary_query = f"""
-        INSERT INTO audit.etl_operations
-        VALUES (
-            generateUUIDv4(),
-            '{context['dag'].dag_id}',
-            '{context['task'].task_id}',
-            null,
-            'AUDIT_SUMMARY',
-            'audit.etl_operations',
-            {operations_summary['total_operations']},
-            now(),
-            now(),
-            'SUCCESS',
-            null,
-            '',
-            ['AUDIT_COMPLETED', 'GDPR_COMPLIANT', 'FZ152_COMPLIANT']
-        )
+        logging.info(f"Формируем запись для аудита: {operations_summary['total_operations']}")
+        audit_query = """
+            INSERT INTO audit.etl_operations
+            (
+                operation_id, dag_id, task_id, user_id, operation_type, table_name,
+                records_processed, start_time, end_time, status, error_message,
+                data_checksum, compliance_flags, created_at
+            )
+            VALUES
         """
-        clickhouse_hook.run(audit_summary_query)
+
+        audit_data = (
+            str(uuid.uuid4()),                              # operation_id
+            kwargs['dag'].dag_id,                           # dag_id
+            kwargs['task'].task_id,                         # task_id
+            None,                                           # user_id
+            'AUDIT_SUMMARY',                                # operation_type
+            'audit.etl_operations',                         # table_name
+            operations_summary['total_operations'],         # records_processed
+            datetime.now(),                                 # start_time
+            datetime.now(),                                 # end_time
+            'SUCCESS',                                      # status
+            None,                                           # error_message
+            '',                                             # data_checksum
+            ['AUDIT_COMPLETED', 'GDPR_COMPLIANT', 'FZ152_COMPLIANT'], # compliance_flags (массив!)
+            datetime.now(),                                 # created_at (лишнее, если default)
+        )
+        logging.info("Запись аудита в clickhouse")
+        client.execute(audit_query, [audit_data])
 
         logging.info(f"✅ Audit completed. Summary: {operations_summary}")
         return operations_summary
-
     except Exception as e:
         logging.error(f"❌ Failed to audit ETL operations: {e}")
         raise
 
-def encrypt_sensitive_data(**context):
+def encrypt_sensitive_data(**kwargs):
     """
     Шифрование чувствительных персональных данных
     """
     logging.info("🔐 Encrypting sensitive personal data...")
 
+    audit_query = """
+        INSERT INTO audit.etl_operations
+        (
+            operation_id, dag_id, task_id, user_id, operation_type, table_name,
+            records_processed, start_time, end_time, status, error_message,
+            data_checksum, compliance_flags, created_at
+        )
+        VALUES
+    """
+
     try:
-        clickhouse_hook = ClickHouseHook()
+        client = get_clickhouse_client()
 
         # Получение ключа шифрования из переменных окружения
         encryption_key = os.environ.get('BIONICPRO_ENCRYPTION_KEY')
@@ -209,7 +248,7 @@ def encrypt_sensitive_data(**context):
         LIMIT 1000
         """
 
-        customers_to_encrypt = clickhouse_hook.get_records(email_encryption_query)
+        customers_to_encrypt = client.execute(email_encryption_query)
 
         encrypted_count = 0
         for customer_id, email in customers_to_encrypt:
@@ -224,10 +263,9 @@ def encrypt_sensitive_data(**context):
                 UPDATE email = '{encrypted_email}'
                 WHERE customer_id = '{customer_id}'
                 """
-                clickhouse_hook.run(update_query)
+                client.client(update_query)
 
                 encrypted_count += 1
-
             except Exception as e:
                 logging.warning(f"⚠️ Failed to encrypt email for customer {customer_id}: {e}")
                 continue
@@ -240,7 +278,7 @@ def encrypt_sensitive_data(**context):
         LIMIT 1000
         """
 
-        phones_to_encrypt = clickhouse_hook.get_records(phone_encryption_query)
+        phones_to_encrypt = client.execute(phone_encryption_query)
 
         for customer_id, phone in phones_to_encrypt:
             try:
@@ -254,52 +292,49 @@ def encrypt_sensitive_data(**context):
                 UPDATE phone = '{encrypted_phone}'
                 WHERE customer_id = '{customer_id}'
                 """
-                clickhouse_hook.run(update_query)
+                client.execute(update_query)
 
                 encrypted_count += 1
-
             except Exception as e:
                 logging.warning(f"⚠️ Failed to encrypt phone for customer {customer_id}: {e}")
                 continue
 
         # Логирование в аудит
-        encryption_audit_query = f"""
-        INSERT INTO audit.etl_operations
-        VALUES (
-            generateUUIDv4(),
-            '{context['dag'].dag_id}',
-            '{context['task'].task_id}',
-            null,
-            'DATA_ENCRYPTION',
-            'crm.customers',
-            {encrypted_count},
-            now(),
-            now(),
-            'SUCCESS',
-            null,
-            '',
-            ['GDPR_COMPLIANT', 'FZ152_COMPLIANT', 'DATA_ENCRYPTED']
+        audit_data = (
+            str(uuid.uuid4()),                              # operation_id
+            kwargs['dag'].dag_id,                           # dag_id
+            kwargs['task'].task_id,                         # task_id
+            None,                                           # user_id
+            'DATA_ENCRYPTION',                              # operation_type
+            'crm.customers',                                # table_name
+            encrypted_count,                                # records_processed
+            datetime.now(),                                 # start_time
+            datetime.now(),                                 # end_time
+            'SUCCESS',                                      # status
+            None,                                           # error_message
+            '',                                             # data_checksum
+            ['GDPR_COMPLIANT', 'FZ152_COMPLIANT', 'DATA_ENCRYPTED'], # compliance_flags (массив!)
+            datetime.now(),                                 # created_at (лишнее, если default)
         )
-        """
-        clickhouse_hook.run(encryption_audit_query)
 
-        context['task_instance'].xcom_push(key='encrypted_records_count', value=encrypted_count)
+        client.execute(audit_query, [audit_data])
+
+        kwargs['ti'].xcom_push(key='encrypted_records_count', value=encrypted_count)
 
         logging.info(f"🔐 Encrypted {encrypted_count} sensitive data records")
         return encrypted_count
-
     except Exception as e:
         logging.error(f"❌ Failed to encrypt sensitive data: {e}")
         raise
 
-def process_gdpr_requests(**context):
+def process_gdpr_requests(**kwargs):
     """
     Обработка запросов GDPR (право на забвение, экспорт данных)
     """
     logging.info("📋 Processing GDPR data requests...")
 
     try:
-        clickhouse_hook = ClickHouseHook()
+        client = get_clickhouse_client()
 
         # Получение ожидающих запросов GDPR
         pending_requests_query = """
@@ -316,7 +351,7 @@ def process_gdpr_requests(**context):
         LIMIT 100
         """
 
-        pending_requests = clickhouse_hook.get_records(pending_requests_query)
+        pending_requests = client.execute(pending_requests_query)
 
         processed_requests = 0
         failed_requests = 0
@@ -333,7 +368,7 @@ def process_gdpr_requests(**context):
                 UPDATE status = 'PROCESSING', processed_date = now()
                 WHERE request_id = '{request_id}'
                 """
-                clickhouse_hook.run(update_status_query)
+                client.execute(update_status_query)
 
                 if request_type == 'DELETE':
                     # Удаление данных пользователя из всех таблиц
@@ -353,19 +388,18 @@ def process_gdpr_requests(**context):
                         try:
                             # Подсчет записей перед удалением
                             count_query = f"SELECT count(*) FROM {table} WHERE user_id = '{user_id}'"
-                            count_result = clickhouse_hook.get_first(count_query)
+                            count_result = client.execute(count_query)
                             records_count = count_result[0] if count_result else 0
 
                             if records_count > 0:
                                 # Удаление записей
                                 delete_query = f"ALTER TABLE {table} DELETE WHERE user_id = '{user_id}'"
-                                clickhouse_hook.run(delete_query)
+                                client.execute(delete_query)
 
                                 affected_tables.append(table)
                                 total_deleted += records_count
 
                                 logging.info(f"🗑️ Deleted {records_count} records from {table}")
-
                         except Exception as e:
                             logging.error(f"❌ Failed to delete from {table}: {e}")
                             continue
@@ -379,7 +413,7 @@ def process_gdpr_requests(**context):
                         processed_date = now()
                     WHERE request_id = '{request_id}'
                     """
-                    clickhouse_hook.run(completion_query)
+                    client.execute(completion_query)
 
                     processed_requests += 1
                     logging.info(f"✅ GDPR deletion completed for user {user_id}. Total deleted: {total_deleted}")
@@ -392,7 +426,7 @@ def process_gdpr_requests(**context):
                     crm_export_query = f"""
                     SELECT * FROM crm.customers WHERE user_id = '{user_id}'
                     """
-                    crm_data = clickhouse_hook.get_records(crm_export_query)
+                    crm_data = client.execute(crm_export_query)
                     export_data['crm_customers'] = crm_data
 
                     # Экспорт телеметрии (последние 30 дней)
@@ -402,7 +436,7 @@ def process_gdpr_requests(**context):
                       AND start_time >= now() - INTERVAL 30 DAY
                     LIMIT 10000
                     """
-                    telemetry_data = clickhouse_hook.get_records(telemetry_export_query)
+                    telemetry_data = client.execute(telemetry_export_query)
                     export_data['telemetry_sessions'] = telemetry_data
 
                     # Экспорт отчетов
@@ -412,7 +446,7 @@ def process_gdpr_requests(**context):
                     ORDER BY report_date DESC
                     LIMIT 1000
                     """
-                    reports_data = clickhouse_hook.get_records(reports_export_query)
+                    reports_data = client.execute(reports_export_query)
                     export_data['user_reports'] = reports_data
 
                     # Сохранение экспорта (в реальной системе нужно отправить пользователю)
@@ -428,11 +462,10 @@ def process_gdpr_requests(**context):
                     UPDATE status = 'COMPLETED', processed_date = now()
                     WHERE request_id = '{request_id}'
                     """
-                    clickhouse_hook.run(completion_query)
+                    client.execute(completion_query)
 
                     processed_requests += 1
                     logging.info(f"✅ GDPR export completed for user {user_id}. File: {export_file_path}")
-
             except Exception as e:
                 logging.error(f"❌ Failed to process GDPR request {request_id}: {e}")
 
@@ -442,45 +475,44 @@ def process_gdpr_requests(**context):
                 UPDATE status = 'FAILED', processed_date = now()
                 WHERE request_id = '{request_id}'
                 """
-                clickhouse_hook.run(error_query)
+                client.execute(error_query)
 
                 failed_requests += 1
 
         # Сохранение статистики обработки
-        context['task_instance'].xcom_push(key='gdpr_processed', value=processed_requests)
-        context['task_instance'].xcom_push(key='gdpr_failed', value=failed_requests)
+        kwargs['ti'].xcom_push(key='gdpr_processed', value=processed_requests)
+        kwargs['ti'].xcom_push(key='gdpr_failed', value=failed_requests)
 
         logging.info(f"📋 GDPR processing completed. Processed: {processed_requests}, Failed: {failed_requests}")
         return {
             'processed': processed_requests,
             'failed': failed_requests
         }
-
     except Exception as e:
         logging.error(f"❌ Failed to process GDPR requests: {e}")
         raise
 
-def generate_compliance_report(**context):
+def generate_compliance_report(ds, **kwargs):
     """
     Генерация отчета о соответствии нормативным требованиям
     """
     logging.info("📊 Generating compliance report...")
 
     try:
-        clickhouse_hook = ClickHouseHook()
+        client = get_clickhouse_client()
 
         # Получение статистики из предыдущих задач
-        operations_audit = context['task_instance'].xcom_pull(
+        operations_audit = kwargs['ti'].xcom_pull(
             task_ids='audit_etl_operations',
             key='operations_audit'
         ) or {}
 
-        encrypted_count = context['task_instance'].xcom_pull(
+        encrypted_count = kwargs['ti'].xcom_pull(
             task_ids='encrypt_sensitive_data',
             key='encrypted_records_count'
         ) or 0
 
-        gdpr_stats = context['task_instance'].xcom_pull(
+        gdpr_stats = kwargs['ti'].xcom_pull(
             task_ids='process_gdpr_requests',
             key='gdpr_processed'
         ) or 0
@@ -488,7 +520,7 @@ def generate_compliance_report(**context):
         # Дополнительная статистика
         # Общее количество пользователей
         users_count_query = "SELECT count(DISTINCT user_id) FROM crm.customers"
-        total_users = clickhouse_hook.get_first(users_count_query)[0]
+        total_users = client.execute(users_count_query)[0]
 
         # Количество активных устройств
         devices_count_query = """
@@ -496,7 +528,7 @@ def generate_compliance_report(**context):
         FROM telemetry.processed_data
         WHERE start_time >= now() - INTERVAL 30 DAY
         """
-        active_devices = clickhouse_hook.get_first(devices_count_query)[0]
+        active_devices = client.execute(devices_count_query)[0]
 
         # Статистика GDPR запросов
         gdpr_stats_query = """
@@ -508,11 +540,13 @@ def generate_compliance_report(**context):
         WHERE request_date >= now() - INTERVAL 30 DAY
         GROUP BY request_type, status
         """
-        gdpr_requests_stats = clickhouse_hook.get_records(gdpr_stats_query)
+        gdpr_requests_stats = client.execute(gdpr_stats_query)
+
+        execution_date = datetime.strptime(ds, "%Y-%m-%d")
 
         # Формирование отчета
         compliance_report = {
-            'report_date': context['execution_date'].isoformat(),
+            'report_date': execution_date.isoformat(),
             'reporting_period': '24 hours',
             'system_overview': {
                 'total_users': total_users,
@@ -549,11 +583,11 @@ def generate_compliance_report(**context):
             compliance_report['compliance_status']['overall_status'] = 'COMPLIANT'
 
         # Сохранение отчета
-        context['task_instance'].xcom_push(key='compliance_report', value=compliance_report)
+        kwargs['ti'].xcom_push(key='compliance_report', value=compliance_report)
 
         # Сохранение в файл для аудиторов
         report_json = json.dumps(compliance_report, default=str, ensure_ascii=False, indent=2)
-        report_file_path = f"/tmp/compliance_report_{context['execution_date'].strftime('%Y%m%d')}.json"
+        report_file_path = f"/tmp/compliance_report_{execution_date.strftime('%Y%m%d')}.json"
 
         with open(report_file_path, 'w', encoding='utf-8') as f:
             f.write(report_json)
@@ -571,7 +605,7 @@ def generate_compliance_report(**context):
 # ОПРЕДЕЛЕНИЕ ЗАДАЧ
 # =====================================================
 
-start = DummyOperator(
+start = EmptyOperator(
     task_id='start_compliance_audit',
     dag=dag
 )
@@ -580,6 +614,7 @@ start = DummyOperator(
 audit_operations = PythonOperator(
     task_id='audit_etl_operations',
     python_callable=audit_etl_operations,
+    op_kwargs={'ds': '{{ ds }}'},  # или '{{ execution_date }}'
     dag=dag
 )
 
@@ -601,25 +636,26 @@ process_gdpr = PythonOperator(
 generate_report = PythonOperator(
     task_id='generate_compliance_report',
     python_callable=generate_compliance_report,
+    op_kwargs={'ds': '{{ ds }}'},  # или '{{ execution_date }}'
     dag=dag
 )
 
 # Отправка уведомлений при нарушениях
-send_compliance_alert = EmailOperator(
-    task_id='send_compliance_alert',
-    to=['compliance@bionicpro.com', 'security@bionicpro.com'],
-    subject='BionicPRO Daily Compliance Report - {{ ds }}',
-    html_content="""
-    <h2>BionicPRO Compliance Report</h2>
-    <p>Daily compliance audit completed for {{ ds }}.</p>
-    <p>Please review the compliance report for any violations or security concerns.</p>
-    <p>Report file: /tmp/compliance_report_{{ ds_nodash }}.json</p>
-    """,
-    dag=dag,
-    trigger_rule='all_done'  # Отправляем даже если есть ошибки
-)
+# send_compliance_alert = EmailOperator(
+#     task_id='send_compliance_alert',
+#     to=['compliance@bionicpro.com', 'security@bionicpro.com'],
+#     subject='BionicPRO Daily Compliance Report - {{ ds }}',
+#     html_content="""
+#     <h2>BionicPRO Compliance Report</h2>
+#     <p>Daily compliance audit completed for {{ ds }}.</p>
+#     <p>Please review the compliance report for any violations or security concerns.</p>
+#     <p>Report file: /tmp/compliance_report_{{ ds_nodash }}.json</p>
+#     """,
+#     dag=dag,
+#     trigger_rule='all_done'  # Отправляем даже если есть ошибки
+# )
 
-end = DummyOperator(
+end = EmptyOperator(
     task_id='compliance_audit_completed',
     dag=dag
 )
@@ -628,4 +664,5 @@ end = DummyOperator(
 # ОПРЕДЕЛЕНИЕ ЗАВИСИМОСТЕЙ
 # =====================================================
 
-start >> [audit_operations, encrypt_data, process_gdpr] >> generate_report >> send_compliance_alert >> end
+# start >> [audit_operations, encrypt_data, process_gdpr] >> generate_report >> send_compliance_alert >> end
+start >> [audit_operations, encrypt_data, process_gdpr] >> generate_report >> end

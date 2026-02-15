@@ -5,12 +5,14 @@ BionicPRO ETL Master DAG
 
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.http.hooks.http import HttpHook
+from clickhouse_driver import Client  # <-- Используем clickhouse-driver напрямую
 import logging
+import uuid
 
 # Конфигурация DAG
 DEFAULT_ARGS = {
@@ -25,12 +27,26 @@ DEFAULT_ARGS = {
     'max_retry_delay': timedelta(minutes=30),
 }
 
+# Настройки подключения к ClickHouse (можно вынести в Airflow Connections, но для простоты — здесь)
+CLICKHOUSE_CONFIG = {
+    'host': 'clickhouse',
+    'port': 9000,
+    'user': 'reports_user',
+    'password': 'secure_reports_password_2024!',  # ⚠️ Лучше использовать Airflow Connection + get_password()
+    'database': 'reports',
+    'settings': {'max_execution_time': 300},
+    'connect_timeout': 10,
+    'send_receive_timeout': 300,
+    'sync_request_timeout': 300,
+    'compression': True,  # Включить сжатие для производительности
+}
+
 # Создание DAG
 dag = DAG(
     'bionicpro_etl_master',
     default_args=DEFAULT_ARGS,
     description='BionicPRO ETL Master Orchestrator',
-    schedule_interval='*/15 * * * *',  # Каждые 15 минут
+    schedule='*/15 * * * *',  # Каждые 15 минут
     catchup=False,
     max_active_runs=1,
     tags=['bionicpro', 'etl', 'master'],
@@ -56,7 +72,11 @@ dag = DAG(
     """
 )
 
-def check_system_health(**context):
+def get_clickhouse_client():
+    """Возвращает готовый клиент ClickHouse"""
+    return Client(**CLICKHOUSE_CONFIG)
+
+def check_system_health(**kwargs):
     """
     Проверка состояния всех компонентов системы перед запуском ETL
     """
@@ -67,9 +87,8 @@ def check_system_health(**context):
 
     try:
         # Проверка ClickHouse
-        from airflow.providers.clickhouse.hooks.clickhouse import ClickHouseHook
-        clickhouse_hook = ClickHouseHook()
-        clickhouse_hook.run("SELECT 1")
+        client = get_clickhouse_client()
+        client.execute("SELECT 1")
         health_status['clickhouse'] = 'OK'
         logging.info("✅ ClickHouse connection: OK")
     except Exception as e:
@@ -88,22 +107,9 @@ def check_system_health(**context):
         errors.append(f"PostgreSQL: {str(e)}")
         logging.error(f"❌ PostgreSQL connection failed: {e}")
 
-    try:
-        # Проверка Битрикс24 API
-        http_hook = HttpHook(method='GET', http_conn_id='bitrix24_api')
-        response = http_hook.run('crm.contact.list', data={'select': ['ID']})
-        if response.status_code == 200:
-            health_status['bitrix24'] = 'OK'
-            logging.info("✅ Битрикс24 API connection: OK")
-        else:
-            raise Exception(f"HTTP {response.status_code}")
-    except Exception as e:
-        health_status['bitrix24'] = 'WARNING'  # Не критично для работы
-        logging.warning(f"⚠️ Битрикс24 API connection failed: {e}")
-
     # Сохранение статуса в XCom для использования в других задачах
-    context['task_instance'].xcom_push(key='health_status', value=health_status)
-    context['task_instance'].xcom_push(key='health_errors', value=errors)
+    kwargs['ti'].xcom_push(key='health_status', value=health_status)
+    kwargs['ti'].xcom_push(key='health_errors', value=errors)
 
     # Если критические системы недоступны, прерываем выполнение
     if health_status['clickhouse'] == 'ERROR' or health_status['postgresql'] == 'ERROR':
@@ -112,14 +118,14 @@ def check_system_health(**context):
     logging.info(f"🎯 System health check completed. Status: {health_status}")
     return health_status
 
-def calculate_etl_priority(**context):
+def calculate_etl_priority(**kwargs):
     """
     Определение приоритета и порядка выполнения ETL процессов
     """
     logging.info("📊 Calculating ETL execution priority...")
 
     # Получение статуса системы из предыдущей задачи
-    health_status = context['task_instance'].xcom_pull(
+    health_status = kwargs['ti'].xcom_pull(
         task_ids='check_system_health',
         key='health_status'
     )
@@ -135,26 +141,10 @@ def calculate_etl_priority(**context):
         'reason': 'Real-time telemetry processing'
     })
 
-    # Средний приоритет: интеграция с CRM
-    if health_status.get('bitrix24') == 'OK':
-        etl_priority.append({
-            'dag_id': 'crm_integration',
-            'priority': 8,
-            'enabled': True,
-            'reason': 'Битрикс24 CRM available'
-        })
-    else:
-        etl_priority.append({
-            'dag_id': 'crm_integration',
-            'priority': 8,
-            'enabled': False,
-            'reason': 'Битрикс24 CRM unavailable'
-        })
-
     # Низкий приоритет: создание отчетов (зависит от данных)
     etl_priority.append({
         'dag_id': 'reports_mart',
-        'priority': 5,
+        'priority': 8,
         'enabled': True,
         'reason': 'Reports generation'
     })
@@ -170,46 +160,55 @@ def calculate_etl_priority(**context):
     # Сортировка по приоритету
     etl_priority.sort(key=lambda x: x['priority'], reverse=True)
 
-    context['task_instance'].xcom_push(key='etl_priority', value=etl_priority)
+    kwargs['ti'].xcom_push(key='etl_priority', value=etl_priority)
 
     logging.info(f"🎯 ETL priority calculated: {etl_priority}")
     return etl_priority
 
-def log_etl_start(**context):
+def log_etl_start(ds, **kwargs):
     """
     Логирование начала ETL процесса
     """
-    execution_date = context['execution_date']
-    dag_run_id = context['dag_run'].run_id
+    execution_date = datetime.strptime(ds, "%Y-%m-%d")
+    dag_run_id = kwargs['dag_run'].run_id
 
     logging.info(f"🚀 Starting BionicPRO ETL Master execution")
     logging.info(f"📅 Execution date: {execution_date}")
     logging.info(f"🔖 DAG run ID: {dag_run_id}")
 
+    audit_query = """
+        INSERT INTO audit.etl_operations
+        (
+            operation_id, dag_id, task_id, user_id, operation_type, table_name,
+            records_processed, start_time, end_time, status, error_message,
+            data_checksum, compliance_flags, created_at
+        )
+        VALUES
+    """
+
     # Запись в ClickHouse для аудита
     try:
-        from airflow.providers.clickhouse.hooks.clickhouse import ClickHouseHook
-        clickhouse_hook = ClickHouseHook()
+        client = get_clickhouse_client()
 
-        audit_query = f"""
-        INSERT INTO audit.etl_operations
-        VALUES (
-            '{dag_run_id}',
-            'bionicpro_etl_master',
-            'etl_start',
-            null,
-            'MASTER_START',
-            'N/A',
-            0,
-            '{execution_date}',
-            null,
-            'STARTED',
-            null,
-            '',
-            ['GDPR_COMPLIANT', 'FZ152_COMPLIANT']
+        # Логирование в аудит
+        audit_data = (
+            dag_run_id,                                     # operation_id
+            'bionicpro_etl_master',                         # dag_id
+            'etl_start',                                    # task_id
+            None,                                           # user_id
+            'MASTER_START',                                 # operation_type
+            'N/A',                                          # table_name
+            0,                                              # records_processed
+            execution_date,                                 # start_time
+            None,                                           # end_time
+            'STARTED',                                      # status
+            None,                                           # error_message
+            '',                                             # data_checksum
+            ['GDPR_COMPLIANT', 'FZ152_COMPLIANT'],          # compliance_flags (массив!)
+            datetime.now(),                                 # created_at (лишнее, если default)
         )
-        """
-        clickhouse_hook.run(audit_query)
+
+        client.execute(audit_query, [audit_data])
         logging.info("✅ ETL start logged to audit table")
     except Exception as e:
         logging.warning(f"⚠️ Failed to log ETL start: {e}")
@@ -218,10 +217,7 @@ def log_etl_start(**context):
 # ОПРЕДЕЛЕНИЕ ЗАДАЧ DAG
 # =====================================================
 
-start = DummyOperator(
-    task_id='start',
-    dag=dag
-)
+start = EmptyOperator(task_id='start', dag=dag)
 
 # Проверка состояния системы
 health_check = PythonOperator(
@@ -235,6 +231,7 @@ health_check = PythonOperator(
 log_start = PythonOperator(
     task_id='log_etl_start',
     python_callable=log_etl_start,
+    op_kwargs={'ds': '{{ ds }}'},  # или '{{ execution_date }}'
     dag=dag,
     doc_md="Логирование начала ETL процесса в audit таблицу"
 )
@@ -283,7 +280,7 @@ trigger_audit = TriggerDagRunOperator(
     doc_md="Запуск процессов аудита и GDPR/152-ФЗ compliance"
 )
 
-completion = DummyOperator(
+completion = EmptyOperator(
     task_id='etl_completed',
     dag=dag,
     trigger_rule='all_done',  # Выполняется даже если некоторые задачи failed
@@ -317,11 +314,11 @@ priority_calc >> trigger_audit
 dag.sla_miss_callback = None  # Можно добавить функцию для отправки алертов
 
 # Callback функции для уведомлений
-def on_success_callback(context):
+def on_success_callback(kwargs):
     """Callback при успешном завершении DAG"""
     logging.info("🎉 BionicPRO ETL Master completed successfully!")
 
-def on_failure_callback(context):
+def on_failure_callback(kwargs):
     """Callback при ошибке в DAG"""
     logging.error("❌ BionicPRO ETL Master failed!")
     # Здесь можно добавить отправку уведомлений в Slack/email

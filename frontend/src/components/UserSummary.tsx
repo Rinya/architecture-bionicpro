@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
+import { makeAuthenticatedRequest, safeParseJson } from '../utils/tokenService';
 
 interface UserSummaryData {
   user_id: string;
@@ -32,22 +33,17 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
+        const response = await makeAuthenticatedRequest(
           `${process.env.REACT_APP_API_URL}/reports/${userId}/summary`,
-          {
-            headers: {
-              'Authorization': `Bearer ${keycloak.token}`,
-              'Accept': 'application/json'
-            }
-          }
+          keycloak.token!
         );
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await safeParseJson(response);
           throw new Error(errorData.message || 'Ошибка загрузки сводки');
         }
 
-        const data: UserSummaryData = await response.json();
+        const data: UserSummaryData = await safeParseJson(response);
         setSummaryData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Произошла ошибка');
@@ -88,9 +84,17 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
     return null;
   }
 
+  const safeNumber = (value: number | null | undefined, defaultValue: number = 0): number => {
+    if (value === null || value === undefined || isNaN(value) || !isFinite(value)) {
+      return defaultValue;
+    }
+    return value;
+  };
+
   const getScoreColor = (score: number, type: 'efficiency' | 'maintenance' | 'battery') => {
-    if (score >= 80) return 'text-green-600 bg-green-50';
-    if (score >= 60) return 'text-yellow-600 bg-yellow-50';
+    const safeScore = safeNumber(score);
+    if (safeScore >= 80) return 'text-green-600 bg-green-50';
+    if (safeScore >= 60) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
   };
 
@@ -120,7 +124,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         {/* Общее использование */}
         <div className="col-span-1 text-center p-4 bg-purple-50 rounded-lg">
           <div className="text-2xl font-bold text-purple-600">
-            {summaryData.total_usage_hours}ч
+            {safeNumber(summaryData.total_usage_hours)}ч
           </div>
           <div className="text-sm text-gray-600">Общее время</div>
         </div>
@@ -128,7 +132,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         {/* Эффективность движений */}
         <div className={`col-span-1 text-center p-4 rounded-lg ${getScoreColor(summaryData.avg_movement_efficiency, 'efficiency')}`}>
           <div className="text-2xl font-bold">
-            {summaryData.avg_movement_efficiency}%
+            {safeNumber(summaryData.avg_movement_efficiency)}%
           </div>
           <div className="text-sm">Эффективность</div>
         </div>
@@ -136,7 +140,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         {/* Техсостояние */}
         <div className={`col-span-1 text-center p-4 rounded-lg ${getScoreColor(summaryData.avg_maintenance_score, 'maintenance')}`}>
           <div className="text-2xl font-bold">
-            {summaryData.avg_maintenance_score}%
+            {safeNumber(summaryData.avg_maintenance_score)}%
           </div>
           <div className="text-sm">Техсостояние</div>
         </div>
@@ -144,7 +148,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         {/* Здоровье батареи */}
         <div className={`col-span-1 text-center p-4 rounded-lg ${getScoreColor(summaryData.avg_battery_health, 'battery')}`}>
           <div className="text-2xl font-bold">
-            {summaryData.avg_battery_health}%
+            {safeNumber(summaryData.avg_battery_health)}%
           </div>
           <div className="text-sm">Батарея</div>
         </div>
@@ -174,7 +178,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         {/* Соотношение активных дней */}
         <div className="col-span-1 text-center p-4 bg-indigo-50 rounded-lg">
           <div className="text-2xl font-bold text-indigo-600">
-            {Math.round((summaryData.total_days_with_data / summaryData.period_days) * 100)}%
+            {summaryData.period_days > 0 ? Math.round((summaryData.total_days_with_data / summaryData.period_days) * 100) : 0}%
           </div>
           <div className="text-sm text-gray-600">Активность</div>
         </div>
@@ -185,21 +189,21 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
         <div className="flex flex-wrap gap-2">
 
           {/* Общее состояние */}
-          {summaryData.avg_movement_efficiency >= 80 &&
-           summaryData.avg_battery_health >= 80 &&
+          {safeNumber(summaryData.avg_movement_efficiency) >= 80 &&
+           safeNumber(summaryData.avg_battery_health) >= 80 &&
            summaryData.total_anomalies < 5 && (
             <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
               ✅ Отличное состояние
             </span>
           )}
 
-          {summaryData.avg_movement_efficiency < 70 && (
+          {safeNumber(summaryData.avg_movement_efficiency) < 70 && (
             <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
               ⚠️ Требуется калибровка
             </span>
           )}
 
-          {summaryData.avg_battery_health < 70 && (
+          {safeNumber(summaryData.avg_battery_health) < 70 && (
             <span className="px-3 py-1 bg-red-100 text-red-800 text-sm rounded-full">
               🔋 Проблемы с батареей
             </span>
@@ -211,7 +215,7 @@ const UserSummary: React.FC<Props> = ({ userId }) => {
             </span>
           )}
 
-          {summaryData.avg_maintenance_score < 80 && (
+          {safeNumber(summaryData.avg_maintenance_score) < 80 && (
             <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
               🔧 Требуется обслуживание
             </span>

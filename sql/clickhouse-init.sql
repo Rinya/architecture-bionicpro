@@ -16,7 +16,7 @@ CREATE DATABASE IF NOT EXISTS audit;
 -- Таблица клиентов
 CREATE TABLE IF NOT EXISTS crm.customers (
     customer_id String,
-    user_id String,  -- Для Row-Level Security
+    user_id String,
     first_name String,
     last_name String,
     email String,
@@ -36,7 +36,7 @@ SETTINGS index_granularity = 8192;
 CREATE TABLE IF NOT EXISTS crm.orders (
     order_id String,
     customer_id String,
-    user_id String,  -- Для Row-Level Security
+    user_id String,
     prosthetic_type String,
     order_date DateTime,
     delivery_date Nullable(DateTime),
@@ -53,7 +53,7 @@ SETTINGS index_granularity = 8192;
 CREATE TABLE IF NOT EXISTS crm.prosthetics (
     prosthetic_id String,
     customer_id String,
-    user_id String,  -- Для Row-Level Security
+    user_id String,
     device_serial String,
     model String,
     firmware_version String,
@@ -73,8 +73,8 @@ SETTINGS index_granularity = 8192;
 -- Сырые данные телеметрии
 CREATE TABLE IF NOT EXISTS telemetry.raw_data (
     device_id String,
-    user_id String,  -- Для Row-Level Security
-    timestamp DateTime64(3),
+    user_id String,
+    timestamp DateTime,
     sensor_type String,
     sensor_value Float64,
     battery_level Float32,
@@ -82,18 +82,18 @@ CREATE TABLE IF NOT EXISTS telemetry.raw_data (
     firmware_version String,
     location_lat Nullable(Float64),
     location_lon Nullable(Float64),
-    metadata String,  -- JSON данные
+    metadata String,
     received_at DateTime DEFAULT now()
 ) ENGINE = MergeTree()
 PARTITION BY (toYYYYMM(timestamp), cityHash64(user_id) % 10)
 ORDER BY (user_id, device_id, timestamp)
 SETTINGS index_granularity = 8192;
 
--- Добавление индексов для оптимизации
+-- Добавление индексов
 ALTER TABLE telemetry.raw_data ADD INDEX idx_user_device (user_id, device_id) TYPE bloom_filter GRANULARITY 1;
 ALTER TABLE telemetry.raw_data ADD INDEX idx_timestamp timestamp TYPE minmax GRANULARITY 1;
 
--- Обработанная телеметрия (сессии использования)
+-- Обработанная телеметрия
 CREATE TABLE IF NOT EXISTS telemetry.processed_data (
     device_id String,
     user_id String,
@@ -117,7 +117,7 @@ SETTINGS index_granularity = 8192;
 -- REPORTS СХЕМА - витрина данных для отчетов
 -- =====================================================
 
--- Основная витрина пользовательской аналитики
+-- Основная витрина
 CREATE TABLE IF NOT EXISTS reports.user_analytics (
     user_id String,
     device_id String,
@@ -137,10 +137,9 @@ PARTITION BY toYYYYMM(report_date)
 ORDER BY (user_id, report_date, device_id)
 SETTINGS index_granularity = 8192;
 
--- Индекс для быстрого поиска по пользователю и дате
 ALTER TABLE reports.user_analytics ADD INDEX idx_user_date (user_id, report_date) TYPE minmax GRANULARITY 1;
 
--- Агрегированная статистика по часам (для мониторинга в реальном времени)
+-- Агрегированная статистика по часам
 CREATE TABLE IF NOT EXISTS reports.hourly_stats (
     device_id String,
     user_id String,
@@ -150,12 +149,12 @@ CREATE TABLE IF NOT EXISTS reports.hourly_stats (
     avg_signal_strength Float32,
     sensor_value_sum Float64,
     created_at DateTime DEFAULT now()
-) ENGINE = SummingMergeTree(measurement_count, sensor_value_sum)
+) ENGINE = SummingMergeTree((measurement_count, sensor_value_sum))
 PARTITION BY toYYYYMMDD(hour)
 ORDER BY (device_id, user_id, hour)
 SETTINGS index_granularity = 1024;
 
--- Materialized View для автоматической агрегации hourly_stats
+-- Materialized View — работает с DateTime, без изменений
 CREATE MATERIALIZED VIEW reports.hourly_stats_mv TO reports.hourly_stats
 AS SELECT
     device_id,
@@ -173,7 +172,7 @@ GROUP BY device_id, user_id, hour;
 -- AUDIT СХЕМА - аудит и compliance
 -- =====================================================
 
--- Таблица аудита ETL операций
+-- Таблица аудита ETL
 CREATE TABLE IF NOT EXISTS audit.etl_operations (
     operation_id String,
     dag_id String,
@@ -194,14 +193,14 @@ PARTITION BY toYYYYMM(start_time)
 ORDER BY (start_time, dag_id, task_id)
 SETTINGS index_granularity = 8192;
 
--- Таблица для GDPR compliance (запросы на удаление данных)
+-- Таблица GDPR запросов
 CREATE TABLE IF NOT EXISTS audit.gdpr_requests (
     request_id String,
     user_id String,
-    request_type String, -- 'DELETE', 'EXPORT', 'RECTIFY'
+    request_type String,
     request_date DateTime,
     processed_date Nullable(DateTime),
-    status String, -- 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'
+    status String,
     affected_tables Array(String),
     deletion_reason String,
     created_at DateTime DEFAULT now()
@@ -214,67 +213,31 @@ SETTINGS index_granularity = 8192;
 -- ФУНКЦИИ ДЛЯ БИЗНЕС-ЛОГИКИ
 -- =====================================================
 
--- Функция расчета maintenance score
 CREATE FUNCTION calculateMaintenanceScore AS (avg_pressure, max_pressure) ->
     if(max_pressure = 0, 0,
        round(100 - (abs(avg_pressure - max_pressure) / max_pressure * 100), 2));
 
--- Функция для проверки доступа пользователя (Row-Level Security)
 CREATE FUNCTION validateUserAccess AS (requested_user_id) ->
     if(requested_user_id = currentUser() OR hasRole('admin'), 1, 0);
 
--- =====================================================
--- ROW-LEVEL SECURITY ПОЛИТИКИ
--- =====================================================
-
--- Создание пользователя для Reports API
-CREATE USER IF NOT EXISTS reports_user IDENTIFIED WITH sha256_password BY 'secure_reports_password_2024!';
-
--- RLS политики для телеметрии
-CREATE ROW POLICY IF NOT EXISTS user_isolation_telemetry_raw ON telemetry.raw_data
-FOR SELECT TO reports_user
-USING user_id = currentUser();
-
-CREATE ROW POLICY IF NOT EXISTS user_isolation_telemetry_processed ON telemetry.processed_data
-FOR SELECT TO reports_user
-USING user_id = currentUser();
-
--- RLS политики для отчетов
-CREATE ROW POLICY IF NOT EXISTS user_isolation_reports ON reports.user_analytics
-FOR SELECT TO reports_user
-USING user_id = currentUser();
-
--- RLS политики для CRM данных
-CREATE ROW POLICY IF NOT EXISTS user_isolation_crm_customers ON crm.customers
-FOR SELECT TO reports_user
-USING user_id = currentUser();
-
-CREATE ROW POLICY IF NOT EXISTS user_isolation_crm_orders ON crm.orders
-FOR SELECT TO reports_user
-USING user_id = currentUser();
 
 -- =====================================================
 -- ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ
 -- =====================================================
 
--- Настройка компрессии для больших таблиц
+-- Компрессия
 ALTER TABLE telemetry.raw_data MODIFY COLUMN metadata Codec(ZSTD(1));
 ALTER TABLE audit.etl_operations MODIFY COLUMN error_message Codec(LZ4HC(9));
 
--- Настройка TTL для старых данных (удаление данных старше 3 лет для GDPR)
+-- TTL — теперь работает, так как timestamp имеет тип DateTime
 ALTER TABLE telemetry.raw_data MODIFY TTL timestamp + INTERVAL 3 YEAR;
 ALTER TABLE audit.etl_operations MODIFY TTL start_time + INTERVAL 7 YEAR;
 
 -- =====================================================
 -- INITIAL DATA SETUP
 -- =====================================================
-
--- Создание тестовых записей для проверки
-INSERT INTO crm.customers VALUES
-('test-customer-1', 'user1', 'Иван', 'Петров', 'ivan@example.com', '+7-900-123-45-67', 'RU', '2024-01-15', 'ACTIVE', 'bitrix-1', now(), now());
-
-INSERT INTO telemetry.raw_data VALUES
-('esp32-001', 'user1', now(), 'pressure', 75.5, 85.2, -70, '1.2.3', NULL, NULL, '{"temperature": 36.6}', now());
+--INSERT INTO telemetry.raw_data VALUES
+--('esp32-001', 'user1', now(), 'pressure', 75.5, 85.2, -70, '1.2.3', NULL, NULL, '{"temperature": 36.6}', now());
 
 -- Сообщение об успешной инициализации
 SELECT 'ClickHouse schema for BionicPRO ETL initialized successfully!' as status;

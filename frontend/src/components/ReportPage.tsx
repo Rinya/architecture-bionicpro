@@ -6,6 +6,7 @@ import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import SuccessMessage from './SuccessMessage';
 import HelpSection from './HelpSection';
+import { makeAuthenticatedRequest, safeParseJson } from '../utils/tokenService';
 
 // Типы для работы с данными отчётов
 interface ReportData {
@@ -89,17 +90,16 @@ const ReportPage: React.FC = () => {
     if (!userId || !keycloak?.token) return;
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/reports/${userId}/devices`, {
-        headers: {
-          'Authorization': `Bearer ${keycloak.token}`
-        }
-      });
+      const response = await makeAuthenticatedRequest(
+        `${process.env.REACT_APP_API_URL}/reports/${userId}/devices`,
+        keycloak.token!
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await safeParseJson(response);
       setDevices(data.devices || []);
     } catch (err) {
       console.error('Error loading devices:', err);
@@ -130,18 +130,13 @@ const ReportPage: React.FC = () => {
         params.append('device_id', selectedDevice);
       }
 
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `${process.env.REACT_APP_API_URL}/reports/${userId}?${params.toString()}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${keycloak.token}`,
-            'Accept': 'application/json'
-          }
-        }
+        keycloak.token!
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeParseJson(response);
 
         // Специальная обработка ошибок доступности данных
         if (response.status === 400 && errorData.available_until) {
@@ -155,7 +150,7 @@ const ReportPage: React.FC = () => {
       }
 
       if (reportFormat === 'json') {
-        const data: ReportData = await response.json();
+        const data: ReportData = await safeParseJson(response);
         setReportData(data);
         setSuccess(`Отчёт загружен успешно. Найдено данных за ${data.summary.total_days} дней.`);
       } else {
@@ -165,7 +160,9 @@ const ReportPage: React.FC = () => {
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = `bionicpro_report_${userId}_${startDate}_${endDate}.${reportFormat}`;
+        // Определяем расширение файла в зависимости от формата
+        const fileExtension = reportFormat === 'excel' ? 'xlsx' : reportFormat === 'pdf' ? 'pdf' : reportFormat;
+        a.download = `bionicpro_report_${userId}_${startDate}_${endDate}.${fileExtension}`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -202,17 +199,13 @@ const ReportPage: React.FC = () => {
         params.append('device_id', selectedDevice);
       }
 
-      const response = await fetch(
+      const response = await makeAuthenticatedRequest(
         `${process.env.REACT_APP_API_URL}/reports/${userId}?${params.toString()}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${keycloak.token}`
-          }
-        }
+        keycloak.token!
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeParseJson(response);
 
         // Специальная обработка ошибок доступности данных
         if (response.status === 400 && errorData.available_until) {
@@ -231,7 +224,9 @@ const ReportPage: React.FC = () => {
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = `bionicpro_report_${userId}_${startDate}_${endDate}.${format}`;
+      // Определяем расширение файла в зависимости от формата
+      const fileExtension = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : format;
+      a.download = `bionicpro_report_${userId}_${startDate}_${endDate}.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
