@@ -1,0 +1,17 @@
+# Environment variables with sensitive data
+.env
+
+# PostgreSQL data directory
+/postgres-keycloak-data
+
+# IDE workspace files
+2024__yandex-architecture-sso.code-workspace
+
+# Docker volumes and logs
+clickhouse-data/
+redis-data/
+postgres-airflow-data/
+
+# OS generated files
+.DS_Store
+Thumbs.db

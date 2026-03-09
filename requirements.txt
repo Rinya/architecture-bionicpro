@@ -1,0 +1,14 @@
+# requirements.txt
+clickhouse-driver
+clickhouse-sqlalchemy
+clickhouse-cityhash
+kafka-python
+pandas
+requests
+pyarrow
+
+apache-airflow-providers-redis>=4.0.0
+apache-airflow-providers-postgres>=5.0.0
+apache-airflow-providers-standard
+apache-airflow-providers-celery
+# apache-airflow[postgres,redis,kafka]==3.1.7
